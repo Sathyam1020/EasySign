@@ -1,8 +1,13 @@
 import { FileItem } from "@/constants/types";
+import { Theme } from "@/types/documents";
 
-type Props = FileItem;
+type Props = {
+  name: string;
+  theme: Theme; 
+  status: string;
+}
 
-export function FileCard({ name, theme, signed }: Props) {
+export function DocumentCard({ name, theme, status }: Props) {
   return (
     <div className="rounded-2xl overflow-hidden bg-white w-72 cursor-pointer shadow-md hover:shadow-lg transition-all duration-200">
       <div
@@ -31,7 +36,7 @@ export function FileCard({ name, theme, signed }: Props) {
       </div>
 
       <div className="flex justify-between items-center px-4 py-4 text-sm text-gray-500">
-        <span>{signed ? "Signed" : "Not signed"}</span>
+        <span>{status}</span>
         <span className="text-xl cursor-pointer">⋯</span>
       </div>
     </div>

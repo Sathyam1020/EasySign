@@ -1,0 +1,213 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------- ENUMS ----------
+enum DocumentStatus {
+  pending
+  partially_signed
+  completed
+}
+
+enum SignerStatus {
+  pending
+  signed
+}
+
+enum FieldType {
+  signature
+  initials
+  date
+  text
+  checkbox
+}
+
+model User {
+  id            String    @id @default(uuid())
+  name          String
+  email         String
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  documents Document[]
+  organizationMembers OrganizationMember[]
+  ownedOrganizations Organization[]
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(uuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(uuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// ---------- ORGANIZATIONS ----------
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+
+  ownerId   String
+  owner     User     @relation(fields: [ownerId], references: [id])
+
+  documents Document[]
+  members   OrganizationMember[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// link users <-> orgs
+model OrganizationMember {
+  id     String @id @default(uuid())
+
+  orgId  String
+  userId String
+  role   String   // admin, member, viewer
+
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, userId])
+}
+
+
+// ---------- DOCUMENTS ----------
+model Document {
+  id        String   @id @default(uuid())
+
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id])
+
+  createdBy String?
+  creator   User?        @relation(fields: [createdBy], references: [id])
+
+  fileName  String
+  fileData  Bytes
+  fileSize  Int
+
+  status    DocumentStatus @default(pending)
+
+  trackingToken String @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  signers         Signer[]
+  signatureFields SignatureField[]
+  audits          AuditLog[]
+}
+
+
+// ---------- SIGNERS ----------
+model Signer {
+  id         String   @id @default(uuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  email      String
+  name       String
+
+  signingToken String @unique
+  status       SignerStatus @default(pending)
+  signedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  signatureFields SignatureField[]
+}
+
+
+// ---------- SIGNATURE FIELDS ----------
+model SignatureField {
+  id         String @id @default(uuid())
+
+  documentId String
+  signerId   String
+
+  pageNumber Int
+  xPosition  Float
+  yPosition  Float
+  width      Float
+  height     Float
+
+  fieldType  FieldType
+  value      String?
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  signer   Signer   @relation(fields: [signerId], references: [id], onDelete: Cascade)
+}
+
+
+// ---------- AUDIT LOG ----------
+model AuditLog {
+  id         String   @id @default(uuid())
+  documentId String
+  action     String
+  actorEmail String?
+  ipAddress  String?
+  userAgent  String?
+
+  createdAt  DateTime @default(now())
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+}
+

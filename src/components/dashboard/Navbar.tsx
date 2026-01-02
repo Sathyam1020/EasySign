@@ -22,14 +22,14 @@ const Navbar = () => {
 
   return (
     <div className="bg-white">
-      <div className="flex items-center justify-between py-5">
+      <div className="flex items-center justify-between py-4">
         <div className="text-3xl font-bold ">E</div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-7">
           {!pro && (
             <div className="flex items-center justify-center gap-2">
               <div className="font-semibold text-sm ">2-day free trial 👉🏼 </div>
-              <Button onClick={buyPro} className="bg-[#ff7f4a] text-sm rounded-xl text-black px-2 py-1 text-md font-medium border-2 border-black shadow-[2px_2px_0_0_#000] hover:shadow-[4px_4px_0_0_#000]">
-                Buy Pro
+              <Button onClick={buyPro} className="bg-[#ff7f4a] rounded-xl text-black px-2.5 py-1.5 text-sm font-normal border-2 border-black shadow-[2px_2px_0_0_#000] hover:shadow-[4px_4px_0_0_#000]">
+                Buy PRO
               </Button>
             </div>
           )}

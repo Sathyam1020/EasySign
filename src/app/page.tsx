@@ -3,7 +3,7 @@ import React from "react";
 
 const page = () => {
   return (
-    <div className="bg-[#f6e1a8] h-screen">
+    <div className="bg-[#f6e1a8]">
       <div className="">
         <Navbar />
       </div>
