@@ -50,7 +50,7 @@ export default function DocumentsComponent({ documents, isLoading }: Props) {
           <CircleAlertIcon className="h-9 w-9 text-gray-500" />
 
           <div className="text-gray-500">
-            No documents created in this workspace yet.
+            No documents are yet added in this workspace yet.
           </div>
 
           <Button

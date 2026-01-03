@@ -64,9 +64,9 @@ export async function getDocumentViewUrl(documentId: string) {
   });
 
   if (!res.ok) throw new Error("Failed to get view url");
+  const data = await res.json();
 
-  const { url } = await res.json();
-  return url;
+  return data;
 }
 
 export async function getDocumentMeta(documentId: string) {

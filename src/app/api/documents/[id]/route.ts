@@ -5,14 +5,14 @@ import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const cookieStore = await cookies();
   const activeOrg = cookieStore.get("active_org_id")?.value;
-
+  const { id } = await params;
   const doc = await prisma.document.findFirst({
     where: {
-      id: params.id,
+      id: id,
       orgId: activeOrg,
     },
     select: {

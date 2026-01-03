@@ -266,7 +266,7 @@ export function OrgSwitcher() {
               Cancel
             </Button>
             <Button
-              className="flex-1 bg-[#ff7f4a] text-white font-semibold border-2 border-black shadow-[3px_3px_0_0_#000] hover:shadow-[5px_5px_0_0_#000] transition-all"
+              className="flex-1 bg-[#ff7f4a] rounded-xl text-white font-semibold border-2 border-black shadow-[3px_3px_0_0_#000] hover:shadow-[5px_5px_0_0_#000] transition-all"
               disabled={!name.trim() || createMutation.isPending}
               onClick={() => createMutation.mutate(name)}
             >
