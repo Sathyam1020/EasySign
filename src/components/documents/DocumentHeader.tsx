@@ -3,9 +3,11 @@
 import {
   ArrowLeft,
   CloudCheck,
+  LucideEye,
   Play,
   RocketIcon,
   SaveIcon,
+  Send,
   VideoIcon,
 } from "lucide-react";
 import React from "react";
@@ -65,7 +67,7 @@ const DocumentHeader = ({ fileName, fileStatus }: DocumentHeaderProps) => {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="bg-[#dcfce6] rounded-xl py-2.5 px-4 cursor-pointer hover:bg-[#befad1] transition-all duration-200">
-                    <Play className="h-4 w-4 font-light text-sm text-green-800 " />
+                    <LucideEye className="h-4 w-4 font-light text-sm text-green-800 " />
                   </div>
                 </TooltipTrigger>
                 <TooltipContent className="">
@@ -89,7 +91,7 @@ const DocumentHeader = ({ fileName, fileStatus }: DocumentHeaderProps) => {
             disabled={true}
             className="rounded-xl bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 font-medium shadow-md hover:shadow-lg transition-all duration-200"
           >
-            Send File
+            <Send /> Send Document
           </Button>
         </div>
       </div>

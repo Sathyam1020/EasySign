@@ -18,7 +18,7 @@ export function DocumentCard({ id, name, theme, status }: Props) {
       className="rounded-2xl overflow-hidden bg-white w-72 shadow-md hover:shadow-lg transition-all duration-200"
     >
       <div
-        className="relative h-40 flex items-center cursor-pointer justify-center text-lg font-medium overflow-hidden"
+        className="relative p-2 h-40 flex items-center cursor-pointer justify-center text-lg font-medium overflow-hidden"
         style={{ backgroundColor: theme.base }}
         onClick={() => router.push(`/documents/${id}`)}
       >
