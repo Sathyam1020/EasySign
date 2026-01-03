@@ -1,17 +1,24 @@
 import { FileItem } from "@/constants/types";
 import { Theme } from "@/types/documents";
+import { useRouter } from "next/navigation";
 
 type Props = {
+  id: string;
   name: string;
-  theme: Theme; 
+  theme: Theme;
   status: string;
-}
+};
 
-export function DocumentCard({ name, theme, status }: Props) {
+export function DocumentCard({ id, name, theme, status }: Props) {
+  const router = useRouter();
+
   return (
-    <div className="rounded-2xl overflow-hidden bg-white w-72 cursor-pointer shadow-md hover:shadow-lg transition-all duration-200">
+    <div
+      className="rounded-2xl overflow-hidden bg-white w-72 cursor-pointer shadow-md hover:shadow-lg transition-all duration-200"
+      onClick={() => router.push(`/documents/${id}`)}
+    >
       <div
-        className="relative h-42 flex items-center justify-center text-lg font-medium overflow-hidden"
+        className="relative h-40 flex items-center justify-center text-lg font-medium overflow-hidden"
         style={{ backgroundColor: theme.base }}
       >
         <span className="relative z-10 text-2xl font-light">{name}</span>

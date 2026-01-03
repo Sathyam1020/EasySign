@@ -10,29 +10,42 @@ import { UploadDocumentModal } from "./UploadDocument";
 
 type Props = {
   documents: DashboardDocument[];
+  isLoading: boolean;
 };
 
 const themes: Theme[] = [
-  { base: "#FFE066", blob: "#C9A227" },
+  { base: "#ffd700", blob: "#ccac02" },
   { base: "#C9F2FF", blob: "#7EC4E4" },
   { base: "#FFD9EC", blob: "#E88BB5" },
   { base: "#E8FFD3", blob: "#95C97A" },
   { base: "#FFF2CC", blob: "#E6B95C" },
 ];
 
-export default function DocumentsComponent({ documents }: Props) {
+export default function DocumentsComponent({ documents, isLoading }: Props) {
   const [openUpload, setOpenUpload] = useState(false);
 
-  // sequential theme assignment that avoids repetition naturally
-  const docsWithTheme = documents.map((doc, index) => ({
+  // loading state FIRST (important)
+  if (isLoading) {
+    return (
+      <div className="mt-20 w-full bg-white rounded-3xl px-10 py-16 flex flex-col items-center justify-center gap-4">
+        <div className="h-12 w-12 border-4 border-gray-300 border-t-[#ff7f4a] rounded-full animate-spin" />
+        <p className="text-gray-500 text-lg font-semibold">
+          Fetching documents…
+        </p>
+      </div>
+    );
+  }
+
+  // assign themes only once we HAVE docs
+  const docsWithTheme = (documents || []).map((doc, index) => ({
     ...doc,
     theme: themes[index % themes.length],
   }));
 
-  // EMPTY STATE
+  // empty state
   if (!documents || documents.length === 0) {
     return (
-      <>
+      <div>
         <div className="w-full bg-white rounded-3xl flex flex-col items-center justify-center gap-4 mt-20 px-10 py-16">
           <CircleAlertIcon className="h-9 w-9 text-gray-500" />
 
@@ -55,17 +68,18 @@ export default function DocumentsComponent({ documents }: Props) {
           open={openUpload}
           onClose={() => setOpenUpload(false)}
         />
-      </>
+      </div>
     );
   }
 
-  // LIST VIEW
+  // list view
   return (
     <>
       <div className="flex gap-5 flex-wrap">
         {docsWithTheme.map((document) => (
           <DocumentCard
             key={document.id}
+            id={document.id}
             name={document.fileName}
             theme={document.theme}
             status={document.status}

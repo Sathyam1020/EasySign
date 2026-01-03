@@ -140,8 +140,9 @@ model Document {
   creator   User?        @relation(fields: [createdBy], references: [id])
 
   fileName  String
-  fileData  Bytes
+  fileUrl   String
   fileSize  Int
+
 
   status    DocumentStatus @default(pending)
 

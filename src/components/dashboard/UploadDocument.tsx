@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Trash2, Pencil, UploadCloud } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useUploadDocument } from "@/hooks/useDocuments";
+import { toast } from "sonner";
 
 type Props = {
   open: boolean;
@@ -19,8 +21,9 @@ type Props = {
 
 export function UploadDocumentModal({ open, onClose }: Props) {
   const router = useRouter();
-
+  const uploadMutation = useUploadDocument();
   const [file, setFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -39,19 +42,30 @@ export function UploadDocumentModal({ open, onClose }: Props) {
     setFile(null);
   }
 
-  function handleNext() {
+  const handleUpload = () => {
     if (!file) return;
-
-    // Later this will actually upload -> get URL -> save in DB
-    console.log("Selected file:", file);
-
-    onClose();
-    router.push("/documents");
-  }
+    setLoading(true);
+    uploadMutation.mutate(file, {
+      onSuccess: (data) => {
+        toast.success("File uploaded successfully");
+        router.push(`/documents/${data.document.id}`);
+        setFile(null);
+        setLoading(false);
+      },
+      onError: (error) => {
+        toast.error("Upload failed: " + error.message);
+        setLoading(false);
+      },
+    });
+  };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md bg-[#faf7fd] rounded-2xl">
+      <DialogContent
+        className="sm:max-w-md bg-[#faf7fd] rounded-3xl"
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle className="text-2xl text-center font-semibold">
             Upload your file
@@ -87,7 +101,6 @@ export function UploadDocumentModal({ open, onClose }: Props) {
             {/* content */}
             <div className="relative flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-
                 <div>
                   <p className="text-sm font-semibold text-gray-800 truncate max-w-[200px]">
                     {file.name}
@@ -99,7 +112,7 @@ export function UploadDocumentModal({ open, onClose }: Props) {
               </div>
 
               <div className="flex gap-2">
-                <Button
+                {/* <Button
                   variant="outline"
                   size="icon"
                   className="shadow-sm border-gray-300"
@@ -110,7 +123,7 @@ export function UploadDocumentModal({ open, onClose }: Props) {
                   }
                 >
                   <Pencil className="h-4 w-4" />
-                </Button>
+                </Button> */}
 
                 <Button variant="destructive" size="icon" onClick={removeFile}>
                   <Trash2 className="h-4 w-4" />
@@ -122,16 +135,16 @@ export function UploadDocumentModal({ open, onClose }: Props) {
 
         {/* FOOTER */}
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" disabled={loading} onClick={onClose} className="rounded-xl ">
             Cancel
           </Button>
 
           <Button
-            disabled={!file}
-            onClick={handleNext}
-            className="bg-[#364152]"
+            disabled={!file || loading}
+            onClick={handleUpload}
+            className="bg-[#364152] rounded-xl "
           >
-            Next
+            {loading ? "Uploading..." : "Next"}
           </Button>
         </div>
       </DialogContent>

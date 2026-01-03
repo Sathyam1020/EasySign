@@ -1,95 +1,64 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-
-import { countOrgs } from "@/lib/services/organisation/count";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import Navbar from "@/components/dashboard/Navbar";
+import DocumentsComponent from "@/components/dashboard/DocumentsComponent";
+import { OrgSwitcher } from "@/components/dashboard/OrgSwitcher";
+import { UploadDocumentModal } from "@/components/dashboard/UploadDocument";
+
+import { countOrgs } from "@/lib/services/organisation/count";
+import { getDocumentsOfOrg } from "@/lib/services/documents/count";
 
 import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogOverlay,
   DialogTitle,
 } from "@/components/ui/dialog";
-
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-
-import {
-  ChevronDownIcon,
-  EllipsisVerticalIcon,
-  FolderOpenIcon,
-  PlusIcon,
-  SearchIcon,
-} from "lucide-react";
-import { createOrg } from "@/lib/services/organisation/organisation";
 import { toast } from "sonner";
-import { getDocumentsOfOrg } from "@/lib/services/documents/count";
-import DocumentsComponent from "@/components/dashboard/DocumentsComponent";
-import { OrgSwitcher } from "@/components/dashboard/OrgSwitcher";
+import { createOrg } from "@/lib/services/organisation/organisation";
 
-const Page = () => {
-  const queryClient = useQueryClient();
-
-  const [orgs, setOrgs] = useState<any[]>([]);
+export default function Page() {
   const [orgName, setOrgName] = useState("");
   const [mounted, setMounted] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const [documents, setDocuments] = useState<any[]>([]);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
 
-  console.log("Documents:", documents);
+  useEffect(() => setMounted(true), []);
 
-  console.log("Orgs:", orgs);
-
-  // fetch orgs (only once)
-  const getOrgCount = useMutation({
-    mutationFn: countOrgs,
-    onSuccess: (data) => setOrgs(data.orgs || []),
+  // 1️⃣ FETCH ORGS + ACTIVE ORG
+  const { data: orgData, isLoading: orgLoading } = useQuery({
+    queryKey: ["orgs"],
+    queryFn: countOrgs,
   });
 
-  // create new org
-  const createOrgMutation = useMutation({
-    mutationFn: createOrg,
-    mutationKey: ["createOrg"],
-    onSuccess: (newOrg) => {
-      setOrgs((prev) => [...prev, newOrg]);
-      queryClient.invalidateQueries({ queryKey: ["orgs"] });
-      toast.success("Workspace created successfully!");
-      setOrgName("");
-    },
+  const orgs = orgData?.orgs ?? [];
+  const activeOrg = orgData?.activeOrg ?? null;
+
+  // 2️⃣ FETCH DOCUMENTS FOR ACTIVE ORG
+  const { data: documents = [], isLoading: docsLoading } = useQuery({
+    queryKey: ["documents", activeOrg],
+    queryFn: getDocumentsOfOrg,
+    enabled: !!activeOrg, // only fetch when org is ready
   });
 
-  const getDocuments = useMutation({
-    mutationFn: getDocumentsOfOrg,
-    mutationKey: ["documents"],
-    onSuccess: (data) => setDocuments(data || []),
-  });
+  // modal state
+  const showOrgModal = mounted && !orgLoading && orgs.length === 0;
 
-  useEffect(() => {
-    getDocuments.mutateAsync();
-  }, []);
-  console.log("Documents State:", documents);
+  async function handleCreateOrg() {
+    if (!orgName.trim()) return;
 
-  useEffect(() => {
-    setMounted(true);
-    getOrgCount.mutateAsync().finally(() => setLoaded(true));
-  }, []);
+    await createOrg(orgName);
+    toast.success("Workspace created");
 
-  const showOrgModal = loaded && orgs.length === 0 && mounted;
+    setOrgName("");
+  }
 
-  if (!loaded) {
+  if (orgLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f9fafb]">
         <div className="flex flex-col items-center gap-3">
@@ -103,109 +72,83 @@ const Page = () => {
   }
 
   return (
-    <div className="relative">
-      {/* ONBOARDING MODAL */}
-      {mounted && (
-        <Dialog open={showOrgModal} modal>
-          <DialogContent
-            className={`${
-              showOrgModal && "backdrop-blur-xl"
-            } sm:max-w-md fixed left-[50%] top-[50%] bg-white z-50 translate-x-[-50%] translate-y-[-50%]`}
-            onInteractOutside={(e) => e.preventDefault()}
-            onEscapeKeyDown={(e) => e.preventDefault()}
-          >
-            <DialogHeader>
-              <DialogTitle className="text-xl font-medium text-black">
-                Create your first workspace
-              </DialogTitle>
-            </DialogHeader>
+    <div className="relative bg-[#f9fafb] min-h-screen">
+      {/* ===================== ONBOARDING MODAL ===================== */}
+      <Dialog open={showOrgModal} modal>
+        <DialogContent
+          className="sm:max-w-md fixed left-1/2 top-1/2 translate-x-[-50%] translate-y-[-50%]"
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle className="text-xl font-medium text-black">
+              Create your first workspace
+            </DialogTitle>
+          </DialogHeader>
 
-            <p className="text-sm text-gray-700 mt-1">
-              Workspaces help you organize files, teams, and signatures. Let's
-              start by naming your first one.
-            </p>
+          <p className="text-sm text-gray-700 mt-1">
+            Workspaces help you organize files, teams, and signatures. Name your
+            first workspace.
+          </p>
 
-            <div className="space-y-3 mt-4">
-              <Input
-                placeholder="Example: HR Team"
-                value={orgName}
-                onChange={(e) => setOrgName(e.target.value)}
-                className="bg-white/20 outline-none border-gray-300 text-black focus:outline-none focus:ring-0 focus:border-blue-500"
-              />
+          <div className="space-y-3 mt-4">
+            <Input
+              placeholder="Example: HR Team"
+              value={orgName}
+              onChange={(e) => setOrgName(e.target.value)}
+              className="focus:border-blue-500 focus:ring-0"
+            />
 
-              <Button
-                className="w-full bg-[#ff7f4a] text-black font-semibold border-2 border-black shadow-[3px_3px_0_0_#000] hover:shadow-[5px_5px_0_0_#000]"
-                disabled={!orgName.trim() || createOrgMutation.isPending}
-                onClick={() => createOrgMutation.mutate(orgName)}
-              >
-                {createOrgMutation.isPending
-                  ? "Creating..."
-                  : "Create workspace"}
-              </Button>
-            </div>
-          </DialogContent>
-          <DialogOverlay className="fixed inset-0 bg-black/10 backdrop-blur-sm" />
-        </Dialog>
-      )}
-
-      {/* DASHBOARD */}
-      <div className="bg-[#f9fafb] min-h-screen">
-        <div className="border-b border-gray-200">
-          <div className="max-w-7xl mx-auto">
-            <Navbar />
+            <Button
+              className="w-full bg-[#ff7f4a] text-black font-semibold border-2 border-black shadow-[3px_3px_0_0_#000]"
+              disabled={!orgName.trim()}
+              onClick={handleCreateOrg}
+            >
+              Create workspace
+            </Button>
           </div>
-        </div>
+        </DialogContent>
+      </Dialog>
 
-        <div className="max-w-7xl mx-auto my-5 mt-8">
-          <div className="flex items-center justify-between">
-            <div className="flex gap-2 items-center">
-              {/* <DropdownMenu>
-                <DropdownMenuTrigger>
-                  <div className="px-3 py-2 border border-gray-300 rounded-xl cursor-pointer flex items-center gap-1 shadow-sm">
-                    <FolderOpenIcon className="text-gray-600 h-4 w-4" />
-                    <div className="text-sm font-medium text-black">
-                      My Workspace
-                    </div>
-                    <ChevronDownIcon className="text-gray-600 h-4 w-4" />
-                  </div>
-                </DropdownMenuTrigger>
-
-                <DropdownMenuContent>
-                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>Profile</DropdownMenuItem>
-                  <DropdownMenuItem>Billing</DropdownMenuItem>
-                  <DropdownMenuItem>Team</DropdownMenuItem>
-                  <DropdownMenuItem>Subscription</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu> */}
-              <OrgSwitcher />
-            </div>
-
-            <div className="flex gap-3 items-center">
-              <div className="flex items-center border border-gray-300 rounded-lg px-3 py-2 gap-2 max-w-xs">
-                <SearchIcon className="h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search your file..."
-                  className="flex-1 outline-none text-sm text-gray-700"
-                />
-              </div>
-
-              <Button className="px-3 py-2 shadow-sm flex gap-2 bg-[#364152]">
-                <PlusIcon />
-                New File
-              </Button>
-            </div>
-          </div>
-        </div>
-
+      {/* ===================== DASHBOARD ===================== */}
+      <div className="border-b border-gray-200">
         <div className="max-w-7xl mx-auto">
-          <DocumentsComponent documents={documents} />
+          <Navbar />
         </div>
       </div>
+
+      <div className="max-w-7xl mx-auto my-5 mt-8">
+        <div className="flex items-center justify-between">
+          <OrgSwitcher />
+
+          <div className="flex gap-3 items-center">
+            <div className="flex items-center border border-gray-300 rounded-xl px-3 py-2 gap-2 max-w-xs">
+              <input
+                type="text"
+                placeholder="Search your file..."
+                className="flex-1 outline-none text-sm text-gray-700"
+              />
+            </div>
+
+            <Button
+              className="px-3 py-2 shadow-sm flex gap-2 rounded-xl bg-[#364152]"
+              onClick={() => setUploadModalOpen(true)}
+            >
+              New File
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto">
+        <DocumentsComponent documents={documents} isLoading={docsLoading} />
+      </div>
+
+      {/* Upload Modal */}
+      <UploadDocumentModal
+        open={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+      />
     </div>
   );
-};
-
-export default Page;
+}

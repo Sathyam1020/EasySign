@@ -139,7 +139,7 @@ export function OrgSwitcher() {
       <div className="flex gap-2 items-center">
         <DropdownMenu>
           <DropdownMenuTrigger>
-            <div className="px-3 py-2 border border-gray-300 rounded-lg cursor-pointer flex items-center gap-1 shadow-sm hover:bg-gray-50 transition-colors">
+            <div className="px-3 py-2 border border-gray-300 bg-white hover:bg-gray-50 transition-all duration-200  rounded-xl cursor-pointer flex items-center gap-1 shadow-sm ">
               <FolderOpenIcon className="text-gray-600 h-4 w-4" />
               <div className="text-sm font-medium text-black">
                 {activeOrg?.name || "Workspace"}
@@ -223,9 +223,13 @@ export function OrgSwitcher() {
 
       {/* CREATE MODAL */}
       <Dialog open={openCreate} onOpenChange={setOpenCreate}>
-        <DialogContent className="flex flex-col gap-4 bg-white border border-gray-200 shadow-xl !fixed !left-[50%] !top-[50%] !translate-x-[-50%] !translate-y-[-50%] z-[9999]">
+        <DialogContent
+          className="rounded-3xl flex flex-col gap-5 bg-white border border-gray-200 shadow-xl !fixed !left-[50%] !top-[50%] !translate-x-[-50%] !translate-y-[-50%] z-[9999]"
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
           <DialogHeader>
-            <DialogTitle>Name your workspace</DialogTitle>
+            <DialogTitle className="text-2xl ">Name your workspace</DialogTitle>
           </DialogHeader>
 
           <Input
@@ -242,21 +246,43 @@ export function OrgSwitcher() {
               }
             }}
             autoFocus
+            className="
+              focus-visible:outline-none
+              focus:ring-0
+              focus:border-gray-600
+              focus:border-2
+              border-gray-300
+              transition-all duration-200
+            "
           />
 
-          <Button
-            className="w-full bg-[#ff7f4a] text-white font-semibold border-2 border-black shadow-[3px_3px_0_0_#000] hover:shadow-[5px_5px_0_0_#000] transition-all"
-            disabled={!name.trim() || createMutation.isPending}
-            onClick={() => createMutation.mutate(name)}
-          >
-            {createMutation.isPending ? "Creating..." : "Create workspace"}
-          </Button>
+          <div className="flex gap-3 mt-3">
+            <Button
+              variant="outline"
+              className="flex-1 rounded-xl"
+              onClick={() => setOpenCreate(false)}
+              disabled={createMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1 bg-[#ff7f4a] text-white font-semibold border-2 border-black shadow-[3px_3px_0_0_#000] hover:shadow-[5px_5px_0_0_#000] transition-all"
+              disabled={!name.trim() || createMutation.isPending}
+              onClick={() => createMutation.mutate(name)}
+            >
+              {createMutation.isPending ? "Creating..." : "Create workspace"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* RENAME MODAL */}
       <Dialog open={openRename} onOpenChange={setOpenRename}>
-        <DialogContent className="bg-white border border-gray-200 shadow-xl !fixed !left-1/2 !top-1/2 !translate-x-[-50%] !translate-y-[-50%] rounded-3xl p-0 overflow-hidden w-full max-w-lg">
+        <DialogContent
+          className="bg-white border border-gray-200 shadow-xl !fixed !left-1/2 !top-1/2 !translate-x-[-50%] !translate-y-[-50%] rounded-3xl p-0 overflow-hidden w-full max-w-lg"
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
           {/* Header */}
           <div className="px-6 pt-6 pb-4">
             <h2 className="text-xl font-semibold text-gray-900">
@@ -305,7 +331,11 @@ export function OrgSwitcher() {
 
       {/* DELETE CONFIRM MODAL */}
       <Dialog open={openDelete} onOpenChange={setOpenDelete}>
-        <DialogContent className="bg-white border border-gray-200 shadow-xl !fixed !left-1/2 !top-1/2 !translate-x-[-50%] !translate-y-[-50%] rounded-3xl p-0 overflow-hidden w-full max-w-lg">
+        <DialogContent
+          className="bg-white border border-gray-200 shadow-xl !fixed !left-1/2 !top-1/2 !translate-x-[-50%] !translate-y-[-50%] rounded-3xl p-0 overflow-hidden w-full max-w-lg"
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
           {/* Header */}
           <div className="px-6 pt-6 pb-4">
             <h2 className="text-xl font-semibold text-gray-900">
