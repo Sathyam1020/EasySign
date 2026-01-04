@@ -1,6 +1,6 @@
 import React from "react";
 import SignatureOverlay from "./SignatureOverlay";
-import { PlacedSignature } from "./types";
+import { PlacedSignature, ResizeHandle } from "./types";
 
 type Props = {
   signatures: PlacedSignature[];
@@ -21,6 +21,9 @@ type Props = {
     startY: number;
     startW: number;
     startH: number;
+    startCX: number;
+    startCY: number;
+    handle: ResizeHandle;
   }) => void;
   onFontChange: (id: string, nextSize: number) => void;
   clampFont: (size: number) => number;

@@ -19,7 +19,7 @@ import {
   getDocumentViewUrl,
 } from "@/lib/services/documents/documents";
 import dynamic from "next/dynamic";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 // Dynamic imports - NO SSR
@@ -43,6 +43,7 @@ export default function DocumentViewer() {
 
 function DocumentViewerInner() {
   const { id } = useParams() as { id: string };
+  const router = useRouter();
   const { selectedRecipientEmail, getRecipientColor, recipients } =
     useRecipients();
 
@@ -65,9 +66,51 @@ function DocumentViewerInner() {
   const [error, setError] = useState<string | null>(null);
 
   const pdfContainerRef = useRef<HTMLDivElement | null>(null);
+  const pageRef = useRef<HTMLDivElement | null>(null);
   const dropZoneRef = useRef<HTMLDivElement | null>(null);
 
   const clampFont = (size: number) => Math.min(48, Math.max(10, size));
+
+  const clampPositionToPage = (
+    x: number,
+    y: number,
+    width: number,
+    height: number
+  ) => {
+    const rect = pageRef.current?.getBoundingClientRect();
+    if (!rect) return { x, y };
+
+    const halfW = width / 2;
+    const halfH = height / 2;
+    const minX = halfW;
+    const maxX = Math.max(halfW, rect.width - halfW);
+    const minY = halfH;
+    const maxY = Math.max(halfH, rect.height - halfH);
+
+    return {
+      x: Math.min(Math.max(x, minX), maxX),
+      y: Math.min(Math.max(y, minY), maxY),
+    };
+  };
+
+  const clampSizeToPage = (width: number, height: number) => {
+    const rect = pageRef.current?.getBoundingClientRect();
+    if (!rect) return { width, height };
+    return {
+      width: Math.min(width, rect.width),
+      height: Math.min(height, rect.height),
+    };
+  };
+
+  // Drop any signatures whose recipient has been removed
+  useEffect(() => {
+    const activeEmails = new Set(
+      recipients.map((r) => r.email).filter(Boolean)
+    );
+    setPlacedSignatures((prev) =>
+      prev.filter((p) => activeEmails.has(p.email))
+    );
+  }, [recipients]);
 
   // Keep left-panel font slider in sync with the selected signature
   useEffect(() => {
@@ -77,6 +120,17 @@ function DocumentViewerInner() {
       setFontSize(active.fontSize);
     }
   }, [selectedSignatureId, placedSignatures]);
+
+  // Clear selection if its signature was pruned
+  useEffect(() => {
+    if (
+      selectedSignatureId &&
+      !placedSignatures.find((p) => p.id === selectedSignatureId)
+    ) {
+      setSelectedSignatureId(null);
+      setSelectedTool(null);
+    }
+  }, [placedSignatures, selectedSignatureId]);
 
   const handleFontSizeChange = (size: number) => {
     const next = clampFont(size);
@@ -159,6 +213,21 @@ function DocumentViewerInner() {
     }
   };
 
+  const handlePreview = () => {
+    const payload = {
+      placedSignatures,
+      currentPage,
+      numPages,
+      pdfUrl,
+      meta,
+    };
+    if (typeof window !== "undefined") {
+      // localStorage so a new tab can read it
+      localStorage.setItem("previewData", JSON.stringify(payload));
+      window.open(`/documents/${id}/preview`, "_blank", "noopener,noreferrer");
+    }
+  };
+
   useEffect(() => {
     async function load() {
       try {
@@ -191,15 +260,24 @@ function DocumentViewerInner() {
     if (!dragging) return;
 
     const handleMove = (e: PointerEvent) => {
-      if (!pdfContainerRef.current) return;
+      if (!pageRef.current) return;
       e.preventDefault();
-      const pdfRect = pdfContainerRef.current.getBoundingClientRect();
+      const pdfRect = pageRef.current.getBoundingClientRect();
 
       // getBoundingClientRect() already accounts for scroll, just use it directly
       const x = e.clientX - pdfRect.left;
       const y = e.clientY - pdfRect.top;
       setPlacedSignatures((prev) =>
-        prev.map((s) => (s.id === dragging.id ? { ...s, x, y } : s))
+        prev.map((s) => {
+          if (s.id !== dragging.id) return s;
+          const { x: nextX, y: nextY } = clampPositionToPage(
+            x,
+            y,
+            s.width,
+            s.height
+          );
+          return { ...s, x: nextX, y: nextY };
+        })
       );
     };
 
@@ -218,17 +296,70 @@ function DocumentViewerInner() {
     if (!resizing) return;
 
     const handleMove = (e: PointerEvent) => {
-      if (!pdfContainerRef.current) return;
+      if (!pageRef.current) return;
       e.preventDefault();
       const dx = e.clientX - resizing.startX;
       const dy = e.clientY - resizing.startY;
+
+      const minW = 100;
+      const minH = 32;
+
+      const startLeft = resizing.startCX - resizing.startW / 2;
+      const startTop = resizing.startCY - resizing.startH / 2;
+
+      let nextW = resizing.startW;
+      let nextH = resizing.startH;
+      let nextCX = resizing.startCX;
+      let nextCY = resizing.startCY;
+
+      const affectsEast = ["e", "ne", "se"].includes(resizing.handle);
+      const affectsWest = ["w", "nw", "sw"].includes(resizing.handle);
+      const affectsSouth = ["s", "se", "sw"].includes(resizing.handle);
+      const affectsNorth = ["n", "ne", "nw"].includes(resizing.handle);
+
+      if (affectsEast) {
+        nextW = Math.max(minW, resizing.startW + dx);
+        nextCX = startLeft + nextW / 2;
+      }
+
+      if (affectsWest) {
+        nextW = Math.max(minW, resizing.startW - dx);
+        const newLeft = startLeft + dx;
+        nextCX = newLeft + nextW / 2;
+      }
+
+      if (affectsSouth) {
+        nextH = Math.max(minH, resizing.startH + dy);
+        nextCY = startTop + nextH / 2;
+      }
+
+      if (affectsNorth) {
+        nextH = Math.max(minH, resizing.startH - dy);
+        const newTop = startTop + dy;
+        nextCY = newTop + nextH / 2;
+      }
+
+      const { width: boundedW, height: boundedH } = clampSizeToPage(
+        nextW,
+        nextH
+      );
+
+      const { x: boundedCX, y: boundedCY } = clampPositionToPage(
+        nextCX,
+        nextCY,
+        boundedW,
+        boundedH
+      );
+
       setPlacedSignatures((prev) =>
         prev.map((s) =>
           s.id === resizing.id
             ? {
                 ...s,
-                width: Math.max(100, resizing.startW + dx),
-                height: Math.max(32, resizing.startH + dy),
+                width: boundedW,
+                height: boundedH,
+                x: boundedCX,
+                y: boundedCY,
               }
             : s
         )
@@ -267,7 +398,11 @@ function DocumentViewerInner() {
     <div className="h-screen bg-white flex flex-col overflow-hidden">
       {/* Header */}
       <div className="shrink-0">
-        <DocumentHeader fileName={meta?.fileName} fileStatus={meta?.status} />
+        <DocumentHeader
+          fileName={meta?.fileName}
+          fileStatus={meta?.status}
+          onPreview={handlePreview}
+        />
       </div>
 
       {/* 3-Column Layout */}
@@ -356,11 +491,13 @@ function DocumentViewerInner() {
                               return;
                             e.preventDefault();
                             const pdfRect =
-                              pdfContainerRef.current?.getBoundingClientRect();
+                              pageRef.current?.getBoundingClientRect();
                             if (!pdfRect) return;
                             // getBoundingClientRect() already accounts for scroll, just use it directly
                             const x = e.clientX - pdfRect.left;
                             const y = e.clientY - pdfRect.top;
+                            const { x: clampedX, y: clampedY } =
+                              clampPositionToPage(x, y, 150, 42);
                             const color = getRecipientColor(
                               selectedRecipientEmail
                             );
@@ -370,8 +507,8 @@ function DocumentViewerInner() {
                             setPlacedSignatures((prev) => [
                               ...prev,
                               {
-                                x,
-                                y,
+                                x: clampedX,
+                                y: clampedY,
                                 fontSize: clampFont(fontSize),
                                 id: newId,
                                 email: selectedRecipientEmail,
@@ -385,28 +522,30 @@ function DocumentViewerInner() {
                             setSelectedTool("signature");
                           }}
                         >
-                          <Page
-                            pageNumber={currentPage}
-                            width={700}
-                            renderAnnotationLayer={false}
-                            renderTextLayer={false}
-                          />
+                          <div ref={pageRef} className="relative inline-block">
+                            <Page
+                              pageNumber={currentPage}
+                              width={700}
+                              renderAnnotationLayer={false}
+                              renderTextLayer={false}
+                            />
 
-                          <SignatureLayer
-                            signatures={placedSignatures}
-                            currentPage={currentPage}
-                            selectedSignatureId={selectedSignatureId}
-                            onSelectSignature={handleSelectSignature}
-                            onDeleteSignature={handleDeleteSignature}
-                            onDuplicateSignature={handleDuplicateSignature}
-                            onCopySignatureToAllPages={
-                              handleCopySignatureToAllPages
-                            }
-                            onDragStart={handleDragStart}
-                            onResizeStart={handleResizeStart}
-                            onFontChange={handleSignatureFontChange}
-                            clampFont={clampFont}
-                          />
+                            <SignatureLayer
+                              signatures={placedSignatures}
+                              currentPage={currentPage}
+                              selectedSignatureId={selectedSignatureId}
+                              onSelectSignature={handleSelectSignature}
+                              onDeleteSignature={handleDeleteSignature}
+                              onDuplicateSignature={handleDuplicateSignature}
+                              onCopySignatureToAllPages={
+                                handleCopySignatureToAllPages
+                              }
+                              onDragStart={handleDragStart}
+                              onResizeStart={handleResizeStart}
+                              onFontChange={handleSignatureFontChange}
+                              clampFont={clampFont}
+                            />
+                          </div>
                         </div>
                       </>
                     )}

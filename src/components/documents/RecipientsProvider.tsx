@@ -13,6 +13,7 @@ export type Recipient = {
   name: string;
   email: string;
   isCurrentUser?: boolean;
+  signingOrder?: number;
 };
 
 type RecipientsContextValue = {

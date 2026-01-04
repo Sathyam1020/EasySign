@@ -18,9 +18,14 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 type DocumentHeaderProps = {
   fileName: string;
   fileStatus: string;
+  onPreview?: () => void;
 };
 
-const DocumentHeader = ({ fileName, fileStatus }: DocumentHeaderProps) => {
+const DocumentHeader = ({
+  fileName,
+  fileStatus,
+  onPreview,
+}: DocumentHeaderProps) => {
   const router = useRouter();
 
   return (
@@ -66,9 +71,13 @@ const DocumentHeader = ({ fileName, fileStatus }: DocumentHeaderProps) => {
             <div>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="bg-[#dcfce6] rounded-xl py-2.5 px-4 cursor-pointer hover:bg-[#befad1] transition-all duration-200">
+                  <button
+                    type="button"
+                    onClick={onPreview}
+                    className="bg-[#dcfce6] rounded-xl py-2.5 px-4 cursor-pointer hover:bg-[#befad1] transition-all duration-200"
+                  >
                     <LucideEye className="h-4 w-4 font-light text-sm text-green-800 " />
-                  </div>
+                  </button>
                 </TooltipTrigger>
                 <TooltipContent className="">
                   <p>Preview</p>

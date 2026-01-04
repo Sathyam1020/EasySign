@@ -1,6 +1,6 @@
 import { CopyIcon, CopyPlusIcon, Trash2Icon } from "lucide-react";
 import React from "react";
-import { PlacedSignature } from "./types";
+import { PlacedSignature, ResizeHandle } from "./types";
 import {
   Tooltip,
   TooltipContent,
@@ -20,6 +20,9 @@ type ResizeStart = {
   startY: number;
   startW: number;
   startH: number;
+  startCX: number;
+  startCY: number;
+  handle: ResizeHandle;
 };
 
 type Props = {
@@ -57,6 +60,56 @@ const SignatureOverlay = ({
 
   const hoverBgColor = hexToRgba(sig.color, 0.1);
 
+  const handleBaseClasses =
+    "absolute h-3 w-3 bg-white border border-gray-400 rounded-none shadow-sm transition-all duration-150 ease-out opacity-80 group-hover:opacity-100 transform scale-90 group-hover:scale-100 hover:scale-110";
+
+  const handleDefs: Array<{
+    handle: ResizeHandle;
+    positionClass: string;
+    cursor: string;
+  }> = [
+    {
+      handle: "nw",
+      positionClass: "top-0 left-0 -translate-x-1/2 -translate-y-1/2",
+      cursor: "cursor-nwse-resize",
+    },
+    {
+      handle: "n",
+      positionClass: "top-0 left-1/2 -translate-x-1/2 -translate-y-1/2",
+      cursor: "cursor-n-resize",
+    },
+    {
+      handle: "ne",
+      positionClass: "top-0 right-0 translate-x-1/2 -translate-y-1/2",
+      cursor: "cursor-nesw-resize",
+    },
+    {
+      handle: "e",
+      positionClass: "top-1/2 right-0 translate-x-1/2 -translate-y-1/2",
+      cursor: "cursor-e-resize",
+    },
+    {
+      handle: "se",
+      positionClass: "bottom-0 right-0 translate-x-1/2 translate-y-1/2",
+      cursor: "cursor-nwse-resize",
+    },
+    {
+      handle: "s",
+      positionClass: "bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2",
+      cursor: "cursor-s-resize",
+    },
+    {
+      handle: "sw",
+      positionClass: "bottom-0 left-0 -translate-x-1/2 translate-y-1/2",
+      cursor: "cursor-nesw-resize",
+    },
+    {
+      handle: "w",
+      positionClass: "top-1/2 left-0 -translate-x-1/2 -translate-y-1/2",
+      cursor: "cursor-w-resize",
+    },
+  ];
+
   return (
     <div
       className="absolute group"
@@ -73,11 +126,14 @@ const SignatureOverlay = ({
       }}
     >
       <div
-        className="w-full h-full rounded border shadow-sm bg-white/90 flex items-center justify-center text-sm font-semibold relative cursor-move transition-all hover:shadow-md select-none"
+        className="w-full h-full rounded border shadow-sm bg-white/90 flex items-center justify-center text-sm font-semibold relative cursor-pointer transition-colors duration-200 select-none"
         style={{
           borderColor: sig.color,
           color: sig.color,
           fontSize: sig.fontSize,
+          fontFamily: '"Pacifico", "Dancing Script", "Segoe Script", cursive',
+          fontWeight: 600,
+          letterSpacing: "0.03em",
         }}
         onPointerDown={(e) => {
           e.stopPropagation();
@@ -90,9 +146,11 @@ const SignatureOverlay = ({
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.backgroundColor = hoverBgColor;
+          e.currentTarget.style.transition = "background-color 400ms ease";
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.9)";
+          e.currentTarget.style.transition = "background-color 400ms ease";
         }}
       >
         Signature
@@ -148,20 +206,26 @@ const SignatureOverlay = ({
               </TooltipProvider>
             </div>
 
-            {/* Resize handle, only when selected */}
-            <div
-              className="absolute -bottom-2 -right-2 h-4 w-4 rounded-sm bg-white border border-dashed border-gray-400 cursor-se-resize"
-              onPointerDown={(e) => {
-                e.stopPropagation();
-                onResizeStart({
-                  id: sig.id,
-                  startX: e.clientX,
-                  startY: e.clientY,
-                  startW: sig.width,
-                  startH: sig.height,
-                });
-              }}
-            />
+            {/* Resize handles (8 points) */}
+            {handleDefs.map((h) => (
+              <div
+                key={h.handle}
+                className={`${handleBaseClasses} ${h.positionClass} ${h.cursor}`}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  onResizeStart({
+                    id: sig.id,
+                    startX: e.clientX,
+                    startY: e.clientY,
+                    startW: sig.width,
+                    startH: sig.height,
+                    startCX: sig.x,
+                    startCY: sig.y,
+                    handle: h.handle,
+                  });
+                }}
+              />
+            ))}
           </>
         )}
       </div>

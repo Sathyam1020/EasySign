@@ -12,16 +12,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "../ui/tooltip";
-import {
-  PlusIcon,
-  InfoIcon,
-  User as UserIcon,
-  Trash2Icon,
-  ChevronUpIcon,
-  ChevronDownIcon,
-} from "lucide-react";
+import { PlusIcon, InfoIcon, User as UserIcon, Trash2Icon } from "lucide-react";
 import { useRecipients } from "./RecipientsProvider";
-
 
 const DocumentRightColumn = () => {
   const { user, isLoading: userLoading } = useUser();
@@ -34,6 +26,14 @@ const DocumentRightColumn = () => {
     setEnableSigningOrder,
   } = useRecipients();
 
+  const normalizeOrders = (list: typeof recipients) => {
+    const len = list.length || 1;
+    return list.map((r, idx) => ({
+      ...r,
+      signingOrder: Math.min(len, Math.max(1, r.signingOrder ?? idx + 1)),
+    }));
+  };
+
   const addCurrentUser = () => {
     if (!user || hasAddedSelf) return;
 
@@ -42,9 +42,10 @@ const DocumentRightColumn = () => {
       name: user.name || "",
       email: user.email,
       isCurrentUser: true,
+      signingOrder: 1,
     };
 
-    setRecipients([currentUserRecipient, ...recipients]);
+    setRecipients(normalizeOrders([currentUserRecipient, ...recipients]));
     setHasAddedSelf(true);
   };
 
@@ -53,14 +54,15 @@ const DocumentRightColumn = () => {
       id: `new-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       name: "",
       email: "",
+      signingOrder: recipients.length + 1,
     };
-    setRecipients([...recipients, newRecipient]);
+    setRecipients(normalizeOrders([...recipients, newRecipient]));
   };
 
   const updateRecipient = (
     id: string,
-    field: "name" | "email",
-    value: string
+    field: "name" | "email" | "signingOrder",
+    value: string | number
   ) => {
     setRecipients(
       recipients.map((r) => (r.id === id ? { ...r, [field]: value } : r))
@@ -69,29 +71,12 @@ const DocumentRightColumn = () => {
 
   const removeRecipient = (id: string) => {
     const removed = recipients.find((r) => r.id === id);
-    setRecipients(recipients.filter((r) => r.id !== id));
+    const filtered = recipients.filter((r) => r.id !== id);
+    setRecipients(normalizeOrders(filtered));
 
     if (removed?.isCurrentUser) {
       setHasAddedSelf(false);
     }
-  };
-
-  const moveRecipient = (index: number, direction: "up" | "down") => {
-    if (!enableSigningOrder) return;
-
-    const newRecipients = [...recipients];
-    if (direction === "up" && index > 0) {
-      [newRecipients[index], newRecipients[index - 1]] = [
-        newRecipients[index - 1],
-        newRecipients[index],
-      ];
-    } else if (direction === "down" && index < recipients.length - 1) {
-      [newRecipients[index], newRecipients[index + 1]] = [
-        newRecipients[index + 1],
-        newRecipients[index],
-      ];
-    }
-    setRecipients(newRecipients);
   };
 
   if (userLoading) {
@@ -157,9 +142,10 @@ const DocumentRightColumn = () => {
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
                   <p className="text-sm">
-                    When enabled, recipients will sign in the exact order listed. 
-                    The first recipient must complete signing before the next receives the document. 
-                    Disable for simultaneous signing.
+                    When enabled, recipients will sign in the exact order
+                    listed. The first recipient must complete signing before the
+                    next receives the document. Disable for simultaneous
+                    signing.
                   </p>
                 </TooltipContent>
               </Tooltip>
@@ -188,16 +174,44 @@ const DocumentRightColumn = () => {
                 <div className="flex items-center justify-between bg-gray-50 px-4 py-3 border-b border-gray-100">
                   <div className="flex items-center gap-3">
                     {enableSigningOrder && (
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700 font-bold text-sm">
-                        {index + 1}
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          value={recipient.signingOrder || index + 1}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value);
+                            if (val >= 1 && val <= recipients.length) {
+                              updateRecipient(
+                                recipient.id,
+                                "signingOrder",
+                                val
+                              );
+                            }
+                          }}
+                          onBlur={(e) => {
+                            const val = parseInt(e.target.value);
+                            if (!val || val < 1) {
+                              updateRecipient(recipient.id, "signingOrder", 1);
+                            } else if (val > recipients.length) {
+                              updateRecipient(
+                                recipient.id,
+                                "signingOrder",
+                                recipients.length
+                              );
+                            }
+                          }}
+                          min={1}
+                          max={recipients.length}
+                          className="h-8 w-14 text-center text-sm font-semibold border-gray-300 rounded-md [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [-moz-appearance:textfield]"
+                        />
                       </div>
                     )}
-                    <div>
+                    <div className="flex items-center gap-2">
                       <p className="text-sm font-medium text-gray-800">
                         {recipient.name || "Unnamed Signer"}
                       </p>
                       {recipient.isCurrentUser && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-800 mt-1">
+                        <span className="border-blue-300 border inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-800 mt-1">
                           You
                         </span>
                       )}
@@ -205,26 +219,6 @@ const DocumentRightColumn = () => {
                   </div>
 
                   <div className="flex items-center gap-1">
-                    {enableSigningOrder && recipients.length > 1 && (
-                      <>
-                        <button
-                          onClick={() => moveRecipient(index, "up")}
-                          disabled={index === 0}
-                          className="p-1.5 rounded-md hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
-                          aria-label="Move up"
-                        >
-                          <ChevronUpIcon className="h-4 w-4 text-gray-600" />
-                        </button>
-                        <button
-                          onClick={() => moveRecipient(index, "down")}
-                          disabled={index === recipients.length - 1}
-                          className="p-1.5 rounded-md hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
-                          aria-label="Move down"
-                        >
-                          <ChevronDownIcon className="h-4 w-4 text-gray-600" />
-                        </button>
-                      </>
-                    )}
                     {!recipient.isCurrentUser && (
                       <button
                         onClick={() => removeRecipient(recipient.id)}

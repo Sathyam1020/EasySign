@@ -35,10 +35,14 @@ const DocumentLeftCol = ({
     getRecipientColor,
   } = useRecipients();
   const emails = useMemo(
-    () => recipients.map((r) => r.email).filter(Boolean),
+    () => recipients.filter((r) => r.email && r.name).map((r) => r.email),
     [recipients]
   );
   const disableFields = emails.length === 0;
+
+  const FONT_MIN = 10;
+  const FONT_MAX = 48;
+  const sliderFill = ((fontSize - FONT_MIN) / (FONT_MAX - FONT_MIN)) * 100;
 
   return (
     <div className="bg-[#f3f4f6] h-full overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -125,7 +129,17 @@ const DocumentLeftCol = ({
             }}
             disabled={disableFields}
           >
-            <PenIcon className="h-4 w-4 text-black font-semibold text-sm" /> Signature
+            <PenIcon className="h-4 w-4 text-black font-semibold text-sm" />{" "}
+            <span
+              style={{
+                fontFamily:
+                  '"Pacifico", "Dancing Script", "Segoe Script", cursive',
+                fontWeight: 600,
+                letterSpacing: "0.02em",
+              }}
+            >
+              Signature
+            </span>
           </Button>
         </div>
       </div>
@@ -148,15 +162,39 @@ const DocumentLeftCol = ({
             <span>Font size</span>
             <span className="font-semibold text-gray-800">{fontSize}px</span>
           </div>
-          <input
-            type="range"
-            min={10}
-            max={48}
-            step={1}
-            value={fontSize}
-            onChange={(e) => onChangeFontSize(Number(e.target.value))}
-            className="w-full accent-gray-700"
-          />
+          <div className="flex items-center gap-3">
+            <button
+              className="h-6 w-8 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-semibold shadow-sm hover:bg-gray-100 transition-colors"
+              onClick={() => onChangeFontSize(Math.max(FONT_MIN, fontSize - 1))}
+              aria-label="Decrease font size"
+            >
+              -
+            </button>
+            <input
+              type="range"
+              min={FONT_MIN}
+              max={FONT_MAX}
+              step={1}
+              value={fontSize}
+              onChange={(e) => onChangeFontSize(Number(e.target.value))}
+              className="w-full h-2 rounded-full appearance-none outline-none"
+              style={{
+                background: `linear-gradient(to right, #111827 0%, #111827 ${sliderFill}%, #e5e7eb ${sliderFill}%, #e5e7eb 100%)`,
+              }}
+            />
+            <button
+              className="h-6 w-8 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-semibold shadow-sm hover:bg-gray-100 transition-colors"
+              onClick={() => onChangeFontSize(Math.min(FONT_MAX, fontSize + 1))}
+              aria-label="Increase font size"
+            >
+              +
+            </button>
+          </div>
+          <div className="flex justify-between text-[11px] text-gray-500">
+            <span>{FONT_MIN}px</span>
+            <span>Readable</span>
+            <span>{FONT_MAX}px</span>
+          </div>
         </div>
 
         {!hasSelectedSignature && (
