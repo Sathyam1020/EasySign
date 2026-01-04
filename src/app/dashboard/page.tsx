@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import Navbar from "@/components/dashboard/Navbar";
 import DocumentsComponent from "@/components/dashboard/DocumentsComponent";
@@ -27,6 +27,9 @@ export default function Page() {
   const [orgName, setOrgName] = useState("");
   const [mounted, setMounted] = useState(false);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [creatingOrg, setCreatingOrg] = useState(false);
+
+  const queryClient = useQueryClient();
 
   useEffect(() => setMounted(true), []);
 
@@ -52,10 +55,22 @@ export default function Page() {
   async function handleCreateOrg() {
     if (!orgName.trim()) return;
 
-    await createOrg(orgName);
-    toast.success("Workspace created");
+    try {
+      setCreatingOrg(true);
 
-    setOrgName("");
+      await createOrg(orgName);
+
+      // Refresh org data so modal closes once the first workspace exists
+      await queryClient.invalidateQueries({ queryKey: ["orgs"] });
+
+      toast.success("Workspace created");
+
+      setOrgName("");
+      setCreatingOrg(false);
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to create workspace");
+      setCreatingOrg(false);
+    }
   }
 
   if (orgLoading) {
@@ -101,10 +116,10 @@ export default function Page() {
 
             <Button
               className="w-full bg-[#ff7f4a] text-black font-semibold border-2 border-black shadow-[3px_3px_0_0_#000]"
-              disabled={!orgName.trim()}
+              disabled={!orgName.trim() || creatingOrg}
               onClick={handleCreateOrg}
             >
-              Create workspace
+              {creatingOrg ? "Creating..." : "Create workspace"}
             </Button>
           </div>
         </DialogContent>
