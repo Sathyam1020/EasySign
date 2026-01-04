@@ -1,7 +1,7 @@
+// components/documents/DocumentRightColumn.tsx
 "use client";
 
 import { useUser } from "@/hooks/useUser";
-import React, { useState } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -20,24 +20,24 @@ import {
   ChevronUpIcon,
   ChevronDownIcon,
 } from "lucide-react";
+import { useRecipients } from "./RecipientsProvider";
 
-type Recipient = {
-  id: string;
-  name: string;
-  email: string;
-  isCurrentUser?: boolean;
-};
 
 const DocumentRightColumn = () => {
-  const { user, isLoading } = useUser();
-  const [recipients, setRecipients] = useState<Recipient[]>([]);
-  const [enableSigningOrder, setEnableSigningOrder] = useState(false);
-  const [hasAddedSelf, setHasAddedSelf] = useState(false);
+  const { user, isLoading: userLoading } = useUser();
+  const {
+    recipients,
+    setRecipients,
+    hasAddedSelf,
+    setHasAddedSelf,
+    enableSigningOrder,
+    setEnableSigningOrder,
+  } = useRecipients();
 
   const addCurrentUser = () => {
     if (!user || hasAddedSelf) return;
 
-    const currentUserRecipient: Recipient = {
+    const currentUserRecipient = {
       id: `user-${user.id}`,
       name: user.name || "",
       email: user.email,
@@ -49,8 +49,8 @@ const DocumentRightColumn = () => {
   };
 
   const addNewSigner = () => {
-    const newRecipient: Recipient = {
-      id: `new-${Date.now()}`,
+    const newRecipient = {
+      id: `new-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       name: "",
       email: "",
     };
@@ -68,36 +68,38 @@ const DocumentRightColumn = () => {
   };
 
   const removeRecipient = (id: string) => {
+    const removed = recipients.find((r) => r.id === id);
     setRecipients(recipients.filter((r) => r.id !== id));
-    if (recipients.find((r) => r.id === id)?.isCurrentUser) {
+
+    if (removed?.isCurrentUser) {
       setHasAddedSelf(false);
     }
   };
 
   const moveRecipient = (index: number, direction: "up" | "down") => {
+    if (!enableSigningOrder) return;
+
+    const newRecipients = [...recipients];
     if (direction === "up" && index > 0) {
-      const newRecipients = [...recipients];
       [newRecipients[index], newRecipients[index - 1]] = [
         newRecipients[index - 1],
         newRecipients[index],
       ];
-      setRecipients(newRecipients);
     } else if (direction === "down" && index < recipients.length - 1) {
-      const newRecipients = [...recipients];
       [newRecipients[index], newRecipients[index + 1]] = [
         newRecipients[index + 1],
         newRecipients[index],
       ];
-      setRecipients(newRecipients);
     }
+    setRecipients(newRecipients);
   };
 
-  if (isLoading) {
+  if (userLoading) {
     return <div className="p-6 text-center text-gray-500">Loading user...</div>;
   }
 
   return (
-    <div className="bg-[#ffffff] border-l shadow-sm h-full overflow-y-auto flex flex-col">
+    <div className="bg-white border-l shadow-sm h-full overflow-y-auto flex flex-col">
       {/* Header */}
       <div className="bg-[#f3f4f6] py-4 px-5 shrink-0 border-b">
         <h1 className="text-lg font-semibold text-gray-800">Recipients</h1>
@@ -111,7 +113,7 @@ const DocumentRightColumn = () => {
         {hasAddedSelf ? (
           <Button
             onClick={() => removeRecipient(`user-${user?.id}`)}
-            className="flex-1 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-semibold hover:bg-red-100 transition-all duration-200"
+            className="flex-1 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-semibold hover:bg-red-100"
           >
             <Trash2Icon className="mr-2 h-4 w-4" />
             Remove Me
@@ -120,7 +122,7 @@ const DocumentRightColumn = () => {
           <Button
             onClick={addCurrentUser}
             disabled={!user}
-            className="flex-1 rounded-xl bg-gray-50 border border-gray-300 text-gray-700 text-sm font-semibold hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+            className="flex-1 rounded-xl bg-gray-50 border border-gray-300 text-gray-700 text-sm font-semibold hover:bg-gray-100 disabled:opacity-50"
           >
             <UserIcon className="mr-2 h-4 w-4" />
             Add Myself
@@ -128,7 +130,7 @@ const DocumentRightColumn = () => {
         )}
         <Button
           onClick={addNewSigner}
-          className="flex-1 rounded-xl bg-gray-50 border border-gray-300 text-gray-700 text-sm font-semibold hover:bg-gray-100 transition-all duration-200"
+          className="flex-1 rounded-xl bg-gray-50 border border-gray-300 text-gray-700 text-sm font-semibold hover:bg-gray-100"
         >
           <PlusIcon className="mr-2 h-4 w-4" />
           Add Signer
@@ -136,37 +138,34 @@ const DocumentRightColumn = () => {
       </div>
 
       {/* Signing Order Toggle */}
-      <div className="px-5 py-4 border-b">
-        <div className="flex items-center space-x-3">
-          <Checkbox
-            id="signing-order"
-            checked={enableSigningOrder}
-            onCheckedChange={(checked) =>
-              setEnableSigningOrder(checked as boolean)
-            }
-          />
-          <Label
-            htmlFor="signing-order"
-            className="text-sm font-medium text-gray-700 cursor-pointer flex items-center gap-2"
-          >
-            Enable signing order
-            <TooltipProvider>
+      <div className="px-5 py-4 border-b bg-gray-50">
+        <TooltipProvider>
+          <div className="flex items-center space-x-3">
+            <Checkbox
+              id="signing-order"
+              checked={enableSigningOrder}
+              onCheckedChange={(checked) => setEnableSigningOrder(!!checked)}
+            />
+            <Label
+              htmlFor="signing-order"
+              className="text-sm font-medium text-gray-700 cursor-pointer flex items-center gap-2"
+            >
+              Enable signing order
               <Tooltip>
                 <TooltipTrigger asChild>
                   <InfoIcon className="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help" />
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
                   <p className="text-sm">
-                    When enabled, recipients will sign in the exact order
-                    listed. The first recipient must complete signing before the
-                    next receives the document. Disable for simultaneous
-                    signing.
+                    When enabled, recipients will sign in the exact order listed. 
+                    The first recipient must complete signing before the next receives the document. 
+                    Disable for simultaneous signing.
                   </p>
                 </TooltipContent>
               </Tooltip>
-            </TooltipProvider>
-          </Label>
-        </div>
+            </Label>
+          </div>
+        </TooltipProvider>
       </div>
 
       {/* Recipients List */}
@@ -179,17 +178,17 @@ const DocumentRightColumn = () => {
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {recipients.map((recipient, index) => (
               <div
                 key={recipient.id}
-                className="rounded-lg border border-gray-200 bg-white overflow-hidden"
+                className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm hover:shadow transition-shadow"
               >
-                {/* Header with order number and controls */}
-                <div className="flex items-center justify-between bg-gray-50 px-4 py-3 border-b border-gray-200">
+                {/* Header */}
+                <div className="flex items-center justify-between bg-gray-50 px-4 py-3 border-b border-gray-100">
                   <div className="flex items-center gap-3">
                     {enableSigningOrder && (
-                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700 font-bold text-sm">
                         {index + 1}
                       </div>
                     )}
@@ -198,28 +197,29 @@ const DocumentRightColumn = () => {
                         {recipient.name || "Unnamed Signer"}
                       </p>
                       {recipient.isCurrentUser && (
-                        <p className="text-xs text-gray-500">You</p>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-800 mt-1">
+                          You
+                        </span>
                       )}
                     </div>
                   </div>
 
-                  {/* Action buttons */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     {enableSigningOrder && recipients.length > 1 && (
                       <>
                         <button
                           onClick={() => moveRecipient(index, "up")}
                           disabled={index === 0}
-                          className="p-1.5 rounded-md hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                          title="Move up"
+                          className="p-1.5 rounded-md hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                          aria-label="Move up"
                         >
                           <ChevronUpIcon className="h-4 w-4 text-gray-600" />
                         </button>
                         <button
                           onClick={() => moveRecipient(index, "down")}
                           disabled={index === recipients.length - 1}
-                          className="p-1.5 rounded-md hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                          title="Move down"
+                          className="p-1.5 rounded-md hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                          aria-label="Move down"
                         >
                           <ChevronDownIcon className="h-4 w-4 text-gray-600" />
                         </button>
@@ -228,44 +228,36 @@ const DocumentRightColumn = () => {
                     {!recipient.isCurrentUser && (
                       <button
                         onClick={() => removeRecipient(recipient.id)}
-                        className="p-1.5 cursor-pointer bg-red-100 rounded-md hover:bg-red-200 transition-colors"
-                        title="Remove"
+                        className="p-1.5 rounded-md hover:bg-red-100 transition-colors"
+                        aria-label="Remove recipient"
                       >
-                        <Trash2Icon className="h-4 w-4 text-gray-400 hover:text-red-600" />
+                        <Trash2Icon className="h-4 w-4 text-red-600" />
                       </button>
                     )}
                   </div>
                 </div>
 
-                {/* Form fields */}
-                <div className="px-4 py-3 space-y-3">
+                {/* Fields */}
+                <div className="px-4 py-4 space-y-3">
                   <div>
-                    <Label
-                      htmlFor={`name-${recipient.id}`}
-                      className="text-xs text-gray-600 font-medium"
-                    >
+                    <Label className="text-xs text-gray-600 font-medium">
                       Name
                     </Label>
                     <Input
-                      id={`name-${recipient.id}`}
                       value={recipient.name}
                       onChange={(e) =>
                         updateRecipient(recipient.id, "name", e.target.value)
                       }
                       placeholder="Enter name"
                       disabled={recipient.isCurrentUser}
-                      className="mt-1 h-8 text-sm bg-white border border-gray-200"
+                      className="mt-1 h-9 text-sm"
                     />
                   </div>
                   <div>
-                    <Label
-                      htmlFor={`email-${recipient.id}`}
-                      className="text-xs text-gray-600 font-medium"
-                    >
+                    <Label className="text-xs text-gray-600 font-medium">
                       Email
                     </Label>
                     <Input
-                      id={`email-${recipient.id}`}
                       type="email"
                       value={recipient.email}
                       onChange={(e) =>
@@ -273,7 +265,7 @@ const DocumentRightColumn = () => {
                       }
                       placeholder="Enter email"
                       disabled={recipient.isCurrentUser}
-                      className="mt-1 h-8 text-sm bg-white border border-gray-200"
+                      className="mt-1 h-9 text-sm"
                     />
                   </div>
                 </div>

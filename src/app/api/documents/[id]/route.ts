@@ -32,18 +32,18 @@ export async function GET(
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const cookieStore = await cookies();
   const activeOrg = cookieStore.get("active_org_id")?.value;
-
+  const { id } = await params;
   const doc = await prisma.document.findFirst({
-    where: { id: params.id, orgId: activeOrg },
+    where: { id: id, orgId: activeOrg },
   });
 
   if (!doc) return new Response("Not found", { status: 404 });
 
-  await prisma.document.delete({ where: { id: params.id } });
+  await prisma.document.delete({ where: { id: id } });
 
   await s3.send(
     new DeleteObjectCommand({
