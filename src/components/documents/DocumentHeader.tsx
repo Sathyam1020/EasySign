@@ -10,7 +10,6 @@ import {
   Send,
   VideoIcon,
 } from "lucide-react";
-import React from "react";
 import { Button } from "../ui/button";
 import { useRouter } from "next/navigation";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
@@ -19,12 +18,16 @@ type DocumentHeaderProps = {
   fileName: string;
   fileStatus: string;
   onPreview?: () => void;
+  onRename?: () => void;
+  renameDisabled?: boolean;
 };
 
 const DocumentHeader = ({
   fileName,
   fileStatus,
   onPreview,
+  onRename,
+  renameDisabled,
 }: DocumentHeaderProps) => {
   const router = useRouter();
 
@@ -46,9 +49,14 @@ const DocumentHeader = ({
         {/* File Info with Animation */}
         <div className="flex-1 flex items-center justify-center gap-3">
           <div className="flex items-center gap-1">
-            <div className="hover:underline hover:decoration-gray-400 text-gray-600 cursor-pointer text-lg font-semibold tracking-tight animate-fade-in">
+            <button
+              type="button"
+              onClick={onRename}
+              disabled={!onRename || renameDisabled}
+              className="hover:underline hover:decoration-gray-400 text-gray-600 cursor-pointer disabled:cursor-not-allowed text-lg font-semibold tracking-tight animate-fade-in bg-transparent border-0 p-0"
+            >
               {fileName}
-            </div>
+            </button>
             <div className="flex items-center gap-2">
               <span
                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${

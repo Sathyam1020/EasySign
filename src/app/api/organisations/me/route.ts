@@ -17,11 +17,28 @@ export async function GET() {
   });
 
   const cookieStore = await cookies();
-  let activeOrg = cookieStore.get("active_org_id")?.value ?? null;
+  const activeOrgFromCookie = cookieStore.get("active_org_id")?.value ?? null;
+  const activeOrgExists =
+    !!activeOrgFromCookie && orgs.some((org) => org.id === activeOrgFromCookie);
 
-  // NEVER override if cookie already exists
-  // ONLY set if user literally has exactly ONE org and no cookie yet
-  if (!activeOrg && orgs.length === 1) {
+  let activeOrg = activeOrgFromCookie;
+
+  // If the cookie is missing or points to a deleted workspace, pick a fallback
+  if (!activeOrgExists) {
+    activeOrg = orgs[0]?.id ?? null;
+
+    if (activeOrg) {
+      cookieStore.set("active_org_id", activeOrg, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/",
+      });
+    } else {
+      cookieStore.delete("active_org_id");
+    }
+  } else if (!activeOrg && orgs.length === 1) {
+    // If no cookie exists but user only has one workspace, set it
     activeOrg = orgs[0].id;
 
     cookieStore.set("active_org_id", activeOrg, {

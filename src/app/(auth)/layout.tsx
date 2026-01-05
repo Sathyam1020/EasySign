@@ -13,7 +13,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                         width={30}
                         height={30}
                     />
-                    Nodebase
+                    EasySign 
                 </Link>
                 {children}
             </div>

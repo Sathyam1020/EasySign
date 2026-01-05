@@ -18,6 +18,10 @@ import {
   getDocumentMeta,
   getDocumentViewUrl,
 } from "@/lib/services/documents/documents";
+import { useRenameDocument } from "@/hooks/useRenameDocument";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -64,10 +68,14 @@ function DocumentViewerInner() {
   const [loading, setLoading] = useState(true);
   const [pdfLoading, setPdfLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameValue, setRenameValue] = useState("");
 
   const pdfContainerRef = useRef<HTMLDivElement | null>(null);
   const pageRef = useRef<HTMLDivElement | null>(null);
   const dropZoneRef = useRef<HTMLDivElement | null>(null);
+
+  const renameMutation = useRenameDocument();
 
   const clampFont = (size: number) => Math.min(48, Math.max(10, size));
 
@@ -246,6 +254,34 @@ function DocumentViewerInner() {
     load();
   }, [id]);
 
+  useEffect(() => {
+    if (meta?.fileName) {
+      setRenameValue(meta.fileName);
+    }
+  }, [meta?.fileName]);
+
+  const handleOpenRename = () => {
+    setRenameValue(meta?.fileName || "");
+    setRenameOpen(true);
+  };
+
+  const handleConfirmRename = () => {
+    const trimmed = renameValue.trim();
+    if (!trimmed || !id) return;
+
+    renameMutation.mutate(
+      { documentId: id, newFileName: trimmed },
+      {
+        onSuccess: () => {
+          setMeta((prev: any) =>
+            prev ? { ...prev, fileName: trimmed } : prev
+          );
+          setRenameOpen(false);
+        },
+      }
+    );
+  };
+
   // Set worker only in browser
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -401,6 +437,8 @@ function DocumentViewerInner() {
         <DocumentHeader
           fileName={meta?.fileName}
           fileStatus={meta?.status}
+          onRename={handleOpenRename}
+          renameDisabled={renameMutation.isPending}
           onPreview={handlePreview}
         />
       </div>
@@ -559,6 +597,61 @@ function DocumentViewerInner() {
           <DocumentRightColumn />
         </div>
       </div>
+
+      <Dialog
+        open={renameOpen}
+        onOpenChange={(open) => {
+          setRenameOpen(open);
+          if (open) {
+            setRenameValue(meta?.fileName || "");
+          }
+        }}
+      >
+        <DialogContent
+          className="bg-white border border-gray-200 shadow-xl !fixed !left-1/2 !top-1/2 !translate-x-[-50%] !translate-y-[-50%] rounded-3xl p-0 overflow-hidden w-full max-w-lg"
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          {/* Header */}
+          <div className="px-6 pt-6 pb-4">
+            <h2 className="text-xl font-semibold text-gray-900">
+              Rename document
+            </h2>
+
+            <Input
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleConfirmRename();
+                if (e.key === "Escape") setRenameOpen(false);
+              }}
+              placeholder="Enter new name"
+              autoFocus
+              className="mt-5 h-12 rounded-xl border-2 border-gray-300 bg-white text-gray-900 focus-visible:ring-0 focus-visible:border-gray-500 transition"
+            />
+          </div>
+
+          {/* Footer */}
+          <div className="border-t bg-gray-50 px-6 py-3 flex justify-end gap-3">
+            <Button
+              variant="outline"
+              className="rounded-xl border-gray-300 px-5"
+              onClick={() => setRenameOpen(false)}
+              disabled={renameMutation.isPending}
+            >
+              Cancel
+            </Button>
+
+            <Button
+              className="rounded-xl bg-gray-700 hover:bg-gray-800 px-6"
+              disabled={!renameValue.trim() || renameMutation.isPending}
+              onClick={handleConfirmRename}
+            >
+              {renameMutation.isPending ? "Renaming..." : "Rename document"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

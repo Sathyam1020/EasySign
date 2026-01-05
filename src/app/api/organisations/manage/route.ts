@@ -62,5 +62,23 @@ export async function DELETE() {
     where: { id: orgId },
   });
 
-  return Response.json({ success: true });
+  // Re-point the active org cookie to another workspace (or clear it)
+  const cookieStore = await cookies();
+  const fallbackOrg = await prisma.organization.findFirst({
+    where: { members: { some: { userId: session.user.id } } },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (fallbackOrg) {
+    cookieStore.set("active_org_id", fallbackOrg.id, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+    });
+  } else {
+    cookieStore.delete("active_org_id");
+  }
+
+  return Response.json({ success: true, activeOrg: fallbackOrg?.id ?? null });
 }

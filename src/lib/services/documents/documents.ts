@@ -78,3 +78,28 @@ export async function getDocumentMeta(documentId: string) {
 
   return res.json();
 }
+
+export async function renameDocument(
+  documentId: string,
+  newFileName: string
+) {
+  const res = await fetch(`${getApiUrl()}/documents/${documentId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ fileName: newFileName }),
+    credentials: "include",
+  });
+
+  if (!res.ok) throw new Error("Failed to rename document");
+}
+
+export async function deleteDocument(documentId: string) {
+  const res = await fetch(`${getApiUrl()}/documents/${documentId}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+
+  if (!res.ok) throw new Error("Failed to delete document");
+}

@@ -91,7 +91,7 @@ export default function Page() {
       {/* ===================== ONBOARDING MODAL ===================== */}
       <Dialog open={showOrgModal} modal>
         <DialogContent
-          className="sm:max-w-md fixed left-1/2 top-1/2 translate-x-[-50%] translate-y-[-50%]"
+          className="sm:max-w-md rounded-xl fixed left-1/2 top-1/2 translate-x-[-50%] translate-y-[-50%]"
           onInteractOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}
         >
@@ -106,16 +106,16 @@ export default function Page() {
             first workspace.
           </p>
 
-          <div className="space-y-3 mt-4">
+          <div className="space-y-3 mt-2">
             <Input
               placeholder="Example: HR Team"
               value={orgName}
               onChange={(e) => setOrgName(e.target.value)}
-              className="focus:border-blue-500 focus:ring-0"
+              className="focus:border-blue-500 focus:ring-0 rounded-xl"
             />
 
             <Button
-              className="w-full bg-[#ff7f4a] text-black font-semibold border-2 border-black shadow-[3px_3px_0_0_#000]"
+              className="w-full bg-[#ff7f4a] rounded-xl text-black font-semibold border-2 border-black shadow-[3px_3px_0_0_#000]"
               disabled={!orgName.trim() || creatingOrg}
               onClick={handleCreateOrg}
             >

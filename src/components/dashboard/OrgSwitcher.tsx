@@ -81,6 +81,7 @@ export function OrgSwitcher() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["orgs"] });
+      await queryClient.invalidateQueries({ queryKey: ["documents"] });
       await refetch();
     },
   });
@@ -117,6 +118,7 @@ export function OrgSwitcher() {
       toast.success("Workspace deleted");
       setOpenDelete(false);
       await queryClient.invalidateQueries({ queryKey: ["orgs"] });
+      await queryClient.invalidateQueries({ queryKey: ["documents"] });
       await refetch();
     },
     onError: (error: any) => {
