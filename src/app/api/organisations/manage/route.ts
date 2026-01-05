@@ -58,9 +58,29 @@ export async function DELETE() {
 
   if (!org) return new Response("Not found or no permission", { status: 404 });
 
-  await prisma.organization.delete({
-    where: { id: orgId },
-  });
+  try {
+    await prisma.organization.delete({
+      where: { id: orgId },
+    });
+  } catch (error: any) {
+    // Handle foreign key constraint (e.g., documents or members still exist)
+    // Prisma uses error.code === "P2003" for FK constraint failures
+    if (error?.code === "P2003") {
+      return Response.json(
+        {
+          error:
+            "Workspace cannot be deleted while it still has documents. Please delete or move the documents first.",
+        },
+        { status: 400 }
+      );
+    }
+
+    console.error("Failed to delete organization", error);
+    return Response.json(
+      { error: "Failed to delete workspace. Please try again." },
+      { status: 500 }
+    );
+  }
 
   // Re-point the active org cookie to another workspace (or clear it)
   const cookieStore = await cookies();

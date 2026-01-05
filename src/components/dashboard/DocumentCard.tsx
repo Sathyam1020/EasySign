@@ -1,11 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useRenameDocument } from "@/hooks/useRenameDocument"; // adjust path
-import {
-  Ellipsis,
-  PencilIcon,
-  TrashIcon,
-} from "lucide-react";
+import { Ellipsis, PencilIcon, TrashIcon } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +14,7 @@ import { Input } from "../ui/input";
 import { Dialog, DialogContent } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { useDeleteDocument } from "@/hooks/useDeleteDocument";
+import { toast } from "sonner";
 
 type Props = {
   id: string;
@@ -112,7 +109,7 @@ export function DocumentCard({ id, name: initialName, theme, status }: Props) {
 
             <DropdownMenuContent align="end" className="w-full rounded-xl">
               <DropdownMenuLabel className="text-xs text-gray-500 p-2.5">
-                Actions 
+                Actions
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
 
@@ -226,7 +223,21 @@ export function DocumentCard({ id, name: initialName, theme, status }: Props) {
             <Button
               className="rounded-xl bg-red-600 hover:bg-red-700 px-6"
               disabled={deleteMutation.isPending}
-              onClick={() => deleteMutation.mutate(id, { onSuccess: () => setDeleteOpen(false) })}
+              onClick={() =>
+                deleteMutation.mutate(id, {
+                  onSuccess: () => {
+                    setDeleteOpen(false);
+                    toast.success(`Deleted ${displayName}`);
+                  },
+                  onError: (error) => {
+                    toast.error(
+                      error instanceof Error
+                        ? error.message
+                        : "Failed to delete document"
+                    );
+                  },
+                })
+              }
             >
               {deleteMutation.isPending ? "Deleting..." : "Delete document"}
             </Button>
