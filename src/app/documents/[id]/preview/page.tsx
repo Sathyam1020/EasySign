@@ -11,12 +11,25 @@ import { useEffect, useState } from "react";
 
 const Document = dynamic(
   () => import("react-pdf").then((mod) => mod.Document),
-  { ssr: false, loading: () => <p>Loading PDF viewer...</p> }
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center gap-3 py-10 text-gray-700">
+        <div className="h-10 w-10 border-4 border-gray-200 border-t-[#ff7f4a] rounded-full animate-spin" />
+        <span className="font-medium">Loading PDF viewer…</span>
+      </div>
+    ),
+  }
 );
 
 const Page = dynamic(() => import("react-pdf").then((mod) => mod.Page), {
   ssr: false,
-  loading: () => <p>Loading page…</p>,
+  loading: () => (
+    <div className="flex items-center justify-center gap-3 py-6 text-gray-700">
+      <div className="h-8 w-8 border-4 border-gray-200 border-t-[#ff7f4a] rounded-full animate-spin" />
+      <span className="text-sm font-medium">Loading page…</span>
+    </div>
+  ),
 });
 
 export default function PreviewPage() {
@@ -77,8 +90,11 @@ export default function PreviewPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-xl font-semibold text-gray-700">
-          Loading preview…
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-12 w-12 border-4 border-gray-200 border-t-[#ff7f4a] rounded-full animate-spin" />
+          <div className="text-xl font-semibold text-gray-700">
+            Loading preview…
+          </div>
         </div>
       </div>
     );
@@ -102,7 +118,10 @@ export default function PreviewPage() {
             file={pdfUrl}
             onLoadSuccess={({ numPages }) => setNumPages(numPages)}
             loading={
-              <div className="p-6 text-center text-gray-500">Rendering…</div>
+              <div className="p-6 flex items-center justify-center gap-3 text-gray-700">
+                <div className="h-8 w-8 border-4 border-gray-200 border-t-[#ff7f4a] rounded-full animate-spin" />
+                <span className="text-sm font-medium">Rendering…</span>
+              </div>
             }
             onLoadError={(e) => setError(e.message)}
           >
@@ -132,8 +151,8 @@ export default function PreviewPage() {
                                   width: s.width,
                                   height: s.height,
                                   transform: "translate(-45%, -30%)",
-                                //   borderColor: s.color,
-                                //   color: s.color,
+                                  //   borderColor: s.color,
+                                  //   color: s.color,
                                   fontSize: s.fontSize,
                                   fontFamily:
                                     '"Pacifico", "Dancing Script", "Segoe Script", cursive',
@@ -151,8 +170,9 @@ export default function PreviewPage() {
                 </div>
               </div>
             ) : (
-              <div className="p-6 text-center text-gray-500">
-                Loading pages…
+              <div className="p-6 flex items-center justify-center gap-3 text-gray-700">
+                <div className="h-8 w-8 border-4 border-gray-200 border-t-[#ff7f4a] rounded-full animate-spin" />
+                <span className="text-sm font-medium">Loading pages…</span>
               </div>
             )}
           </Document>

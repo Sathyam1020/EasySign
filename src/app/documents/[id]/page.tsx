@@ -330,7 +330,10 @@ function DocumentViewerInner() {
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center">
-        <div className="text-gray-500">Loading document...</div>
+        <div className="flex flex-col items-center gap-3 text-gray-700">
+          <div className="h-12 w-12 border-4 border-gray-200 border-t-[#ff7f4a] rounded-full animate-spin" />
+          <div className="text-base font-semibold">Loading document…</div>
+        </div>
       </div>
     );
   }

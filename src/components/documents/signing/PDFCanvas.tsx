@@ -10,12 +10,25 @@ import { useSignatureDragAndResize } from "@/hooks/useSignatureDragAndResize";
 // Dynamic imports for PDF components
 const Document = dynamic(
   () => import("react-pdf").then((mod) => mod.Document),
-  { ssr: false, loading: () => <p>Loading PDF viewer...</p> }
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center gap-3 py-6 text-gray-700">
+        <div className="h-8 w-8 border-4 border-gray-200 border-t-[#ff7f4a] rounded-full animate-spin" />
+        <span className="text-sm font-medium">Loading PDF viewer…</span>
+      </div>
+    ),
+  }
 );
 
 const Page = dynamic(() => import("react-pdf").then((mod) => mod.Page), {
   ssr: false,
-  loading: () => <p>Loading page…</p>,
+  loading: () => (
+    <div className="flex items-center justify-center gap-3 py-4 text-gray-700">
+      <div className="h-7 w-7 border-4 border-gray-200 border-t-[#ff7f4a] rounded-full animate-spin" />
+      <span className="text-xs font-semibold">Loading page…</span>
+    </div>
+  ),
 });
 
 interface PDFCanvasProps {
@@ -158,7 +171,12 @@ export function PDFCanvas({
         <Document
           file={pdfUrl}
           onLoadSuccess={handleDocumentLoadSuccess}
-          loading={<div className="text-gray-500">Loading document...</div>}
+          loading={
+            <div className="flex items-center justify-center gap-3 text-gray-700 py-6">
+              <div className="h-8 w-8 border-4 border-gray-200 border-t-[#ff7f4a] rounded-full animate-spin" />
+              <span className="text-sm font-medium">Loading document…</span>
+            </div>
+          }
           error={<div className="text-red-500">Failed to load document</div>}
         >
           <Page
@@ -166,7 +184,12 @@ export function PDFCanvas({
             width={700}
             renderAnnotationLayer={false}
             renderTextLayer={false}
-            loading={<div className="text-gray-500">Loading page...</div>}
+            loading={
+              <div className="flex items-center justify-center gap-3 text-gray-700 py-4">
+                <div className="h-7 w-7 border-4 border-gray-200 border-t-[#ff7f4a] rounded-full animate-spin" />
+                <span className="text-xs font-semibold">Loading page…</span>
+              </div>
+            }
           />
 
           {/* Signature overlays */}

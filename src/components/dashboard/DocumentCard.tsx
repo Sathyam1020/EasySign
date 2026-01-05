@@ -1,7 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useRenameDocument } from "@/hooks/useRenameDocument"; // adjust path
-import { Ellipsis, PencilIcon, TrashIcon } from "lucide-react";
+import { useRenameDocument } from "@/hooks/useRenameDocument";
+import { useDeleteDocument } from "@/hooks/useDeleteDocument";
+import {
+  Ellipsis,
+  PencilIcon,
+  TrashIcon,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,24 +18,35 @@ import {
 import { Input } from "../ui/input";
 import { Dialog, DialogContent } from "../ui/dialog";
 import { Button } from "../ui/button";
-import { useDeleteDocument } from "@/hooks/useDeleteDocument";
 import { toast } from "sonner";
+import { Label } from "../ui/label";
+import { CustomCheckbox } from "../CustomCheckbox";
 
 type Props = {
   id: string;
   name: string;
   theme: { base: string; blob: string };
   status: string;
+  isSelected?: boolean;
+  onSelectToggle?: (id: string, checked: boolean) => void;
 };
 
 const canDelete = true; // TODO: implement actual logic
 
-export function DocumentCard({ id, name: initialName, theme, status }: Props) {
+export function DocumentCard({
+  id,
+  name: initialName,
+  theme,
+  status,
+  isSelected = false,
+  onSelectToggle,
+}: Props) {
   const router = useRouter();
   const [renameOpen, setRenameOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [displayName, setDisplayName] = useState(initialName);
   const [newName, setNewName] = useState(initialName);
+  const checkboxId = useId();
 
   const renameMutation = useRenameDocument();
   const deleteMutation = useDeleteDocument();
@@ -42,7 +58,7 @@ export function DocumentCard({ id, name: initialName, theme, status }: Props) {
 
   const handleDialogToggle = (open: boolean) => {
     setRenameOpen(open);
-    setNewName(displayName);
+    if (!open) setNewName(displayName);
   };
 
   const handleRename = () => {
@@ -58,12 +74,12 @@ export function DocumentCard({ id, name: initialName, theme, status }: Props) {
       {
         onSuccess: () => {
           setDisplayName(trimmed);
-          setNewName(trimmed);
           setRenameOpen(false);
-          // Optional: show success toast
+          toast.success("Document renamed");
         },
         onError: () => {
           setNewName(displayName);
+          toast.error("Failed to rename");
         },
       }
     );
@@ -71,7 +87,24 @@ export function DocumentCard({ id, name: initialName, theme, status }: Props) {
 
   return (
     <>
-      <div className="relative rounded-2xl overflow-hidden bg-white w-72 shadow-md hover:shadow-lg transition-all duration-200">
+      <div className="group relative rounded-2xl overflow-hidden bg-white w-72 shadow-md hover:shadow-lg transition-all duration-200">
+        {/* Custom Selection Checkbox - appears on hover or when selected */}
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className={`absolute left-4 top-4 z-20 transition-opacity ${
+            isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          }`}
+        >
+          <CustomCheckbox
+            id={checkboxId}
+            checked={isSelected}
+            onCheckedChange={(checked) => onSelectToggle?.(id, !!checked)}
+          />
+          <Label htmlFor={checkboxId} className="sr-only">
+            Select document
+          </Label>
+        </div>
+
         {/* Thumbnail */}
         <div
           className="relative p-2 h-40 flex items-center justify-center cursor-pointer text-lg font-medium overflow-hidden"
@@ -107,14 +140,14 @@ export function DocumentCard({ id, name: initialName, theme, status }: Props) {
               </button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end" className="w-full rounded-xl">
+            <DropdownMenuContent align="end" className="w-48 rounded-xl">
               <DropdownMenuLabel className="text-xs text-gray-500 p-2.5">
                 Actions
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
 
               <DropdownMenuItem
-                onClick={() => handleDialogToggle(true)}
+                onClick={() => setRenameOpen(true)}
                 className="p-2.5 cursor-pointer flex items-center gap-2"
               >
                 <PencilIcon className="h-4 w-4" />
@@ -139,24 +172,19 @@ export function DocumentCard({ id, name: initialName, theme, status }: Props) {
 
         {/* Loading overlay during rename */}
         {renameMutation.isPending && (
-          <div className="absolute inset-0 bg-white/70 flex items-center justify-center rounded-2xl">
+          <div className="absolute inset-0 bg-white/70 flex items-center justify-center rounded-2xl z-30">
             <span className="text-sm text-gray-600">Renaming...</span>
           </div>
         )}
       </div>
 
+      {/* Rename Dialog */}
       <Dialog open={renameOpen} onOpenChange={handleDialogToggle}>
-        <DialogContent
-          className="bg-white border border-gray-200 shadow-xl !fixed !left-1/2 !top-1/2 !translate-x-[-50%] !translate-y-[-50%] rounded-3xl p-0 overflow-hidden w-full max-w-lg"
-          onInteractOutside={(e) => e.preventDefault()}
-          onEscapeKeyDown={(e) => e.preventDefault()}
-        >
-          {/* Header */}
+        <DialogContent className="rounded-3xl p-0 max-w-md">
           <div className="px-6 pt-6 pb-4">
             <h2 className="text-xl font-semibold text-gray-900">
-              Rename your workspace
+              Rename document
             </h2>
-
             <Input
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
@@ -166,80 +194,47 @@ export function DocumentCard({ id, name: initialName, theme, status }: Props) {
               }}
               placeholder="Enter new name"
               autoFocus
-              className="mt-5 h-12 rounded-xl border-2 border-gray-300 bg-white text-gray-900 focus-visible:ring-0 focus-visible:border-gray-500 transition"
+              className="mt-4 h-12 rounded-xl border-2"
             />
           </div>
-
-          {/* Footer */}
           <div className="border-t bg-gray-50 px-6 py-3 flex justify-end gap-3">
-            <Button
-              variant="outline"
-              className="rounded-xl border-gray-300 px-5"
-              onClick={() => handleDialogToggle(false)}
-              disabled={renameMutation.isPending}
-            >
+            <Button variant="outline" onClick={() => handleDialogToggle(false)}>
               Cancel
             </Button>
-
-            <Button
-              className="rounded-xl bg-gray-700 hover:bg-gray-800 px-6"
-              disabled={!newName.trim() || renameMutation.isPending}
-              onClick={handleRename}
-            >
-              {renameMutation.isPending ? "Renaming..." : "Rename workspace"}
+            <Button onClick={handleRename} disabled={renameMutation.isPending}>
+              {renameMutation.isPending ? "Renaming..." : "Rename"}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
 
+      {/* Delete Confirmation Dialog */}
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <DialogContent
-          className="bg-white border border-gray-200 shadow-xl !fixed !left-1/2 !top-1/2 !translate-x-[-50%] !translate-y-[-50%] rounded-3xl p-0 overflow-hidden w-full max-w-lg"
-          onInteractOutside={(e) => e.preventDefault()}
-          onEscapeKeyDown={(e) => e.preventDefault()}
-        >
-          {/* Header */}
+        <DialogContent className="rounded-3xl p-0 max-w-md">
           <div className="px-6 pt-6 pb-4">
             <h2 className="text-xl font-semibold text-gray-900">
-              Delete this document?
+              Delete document?
             </h2>
             <p className="mt-2 text-sm text-gray-600">
-              This action removes the document from your workspace. You cannot
-              undo this.
+              This action cannot be undone.
             </p>
           </div>
-
-          {/* Footer */}
           <div className="border-t bg-gray-50 px-6 py-3 flex justify-end gap-3">
-            <Button
-              variant="outline"
-              className="rounded-xl border-gray-300 px-5"
-              onClick={() => setDeleteOpen(false)}
-              disabled={deleteMutation.isPending}
-            >
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
               Cancel
             </Button>
-
             <Button
-              className="rounded-xl bg-red-600 hover:bg-red-700 px-6"
-              disabled={deleteMutation.isPending}
+              variant="destructive"
               onClick={() =>
                 deleteMutation.mutate(id, {
                   onSuccess: () => {
                     setDeleteOpen(false);
-                    toast.success(`Deleted ${displayName}`);
-                  },
-                  onError: (error) => {
-                    toast.error(
-                      error instanceof Error
-                        ? error.message
-                        : "Failed to delete document"
-                    );
+                    toast.success("Document deleted");
                   },
                 })
               }
             >
-              {deleteMutation.isPending ? "Deleting..." : "Delete document"}
+              Delete
             </Button>
           </div>
         </DialogContent>

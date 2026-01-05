@@ -57,7 +57,6 @@ export const fetchDocuments = async (): Promise<Document[]> => {
   return response.data.documents;
 };
 
-
 export async function getDocumentViewUrl(documentId: string) {
   const res = await fetch(`${getApiUrl()}/documents/view-url/${documentId}`, {
     credentials: "include",
@@ -79,10 +78,7 @@ export async function getDocumentMeta(documentId: string) {
   return res.json();
 }
 
-export async function renameDocument(
-  documentId: string,
-  newFileName: string
-) {
+export async function renameDocument(documentId: string, newFileName: string) {
   const res = await fetch(`${getApiUrl()}/documents/${documentId}`, {
     method: "PATCH",
     headers: {
@@ -102,4 +98,23 @@ export async function deleteDocument(documentId: string) {
   });
 
   if (!res.ok) throw new Error("Failed to delete document");
+}
+
+export async function moveDocuments(
+  documentIds: string[],
+  targetOrgId: string
+) {
+  const res = await fetch(`${getApiUrl()}/documents/move`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ documentIds, targetOrgId }),
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data?.error || "Failed to move documents");
+  }
+
+  return res.json();
 }

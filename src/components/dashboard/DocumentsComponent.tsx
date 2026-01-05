@@ -11,6 +11,8 @@ import { UploadDocumentModal } from "./UploadDocument";
 type Props = {
   documents: DashboardDocument[];
   isLoading: boolean;
+  selectedIds: Set<string>;
+  onToggleSelect: (id: string, checked: boolean) => void;
 };
 
 const themes: Theme[] = [
@@ -21,7 +23,12 @@ const themes: Theme[] = [
   { base: "#FFF2CC", blob: "#E6B95C" },
 ];
 
-export default function DocumentsComponent({ documents, isLoading }: Props) {
+export default function DocumentsComponent({
+  documents,
+  isLoading,
+  selectedIds,
+  onToggleSelect,
+}: Props) {
   const [openUpload, setOpenUpload] = useState(false);
 
   // loading state FIRST (important)
@@ -83,6 +90,8 @@ export default function DocumentsComponent({ documents, isLoading }: Props) {
             name={document.fileName}
             theme={document.theme}
             status={document.status}
+            isSelected={selectedIds.has(document.id)}
+            onSelectToggle={onToggleSelect}
           />
         ))}
       </div>

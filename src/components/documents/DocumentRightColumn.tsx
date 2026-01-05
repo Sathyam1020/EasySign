@@ -134,7 +134,12 @@ const DocumentRightColumn = ({
   };
 
   if (userLoading) {
-    return <div className="p-6 text-center text-gray-500">Loading user...</div>;
+    return (
+      <div className="p-8 text-center text-gray-700 flex flex-col items-center gap-3">
+        <div className="h-10 w-10 border-4 border-gray-200 border-t-[#ff7f4a] rounded-full animate-spin" />
+        <div className="text-sm font-semibold">Loading user…</div>
+      </div>
+    );
   }
 
   return (
