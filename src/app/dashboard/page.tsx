@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 
 import { toast } from "sonner";
 import { createOrg } from "@/lib/services/organisation/organisation";
+import { Plus } from "lucide-react";
 
 export default function Page() {
   const [orgName, setOrgName] = useState("");
@@ -126,8 +127,8 @@ export default function Page() {
       </Dialog>
 
       {/* ===================== DASHBOARD ===================== */}
-      <div className="border-b border-gray-200">
-        <div className="max-w-7xl mx-auto">
+      <div className="border-b border-white">
+        <div className="">
           <Navbar />
         </div>
       </div>
@@ -137,7 +138,7 @@ export default function Page() {
           <OrgSwitcher />
 
           <div className="flex gap-3 items-center">
-            <div className="flex items-center border border-gray-300 rounded-xl px-3 py-2 gap-2 max-w-xs">
+            <div className="flex items-center border border-gray-300 rounded-xl px-3 py-2 gap-2 max-w-xs bg-white">
               <input
                 type="text"
                 placeholder="Search your file..."
@@ -149,7 +150,7 @@ export default function Page() {
               className="px-3 py-2 shadow-sm flex gap-2 rounded-xl bg-[#364152]"
               onClick={() => setUploadModalOpen(true)}
             >
-              New File
+             <Plus className="h-4 w-4"/> New File
             </Button>
           </div>
         </div>

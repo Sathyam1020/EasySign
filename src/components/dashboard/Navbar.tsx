@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 import { BellIcon, GiftIcon, UserIcon } from "lucide-react";
 import React, { useState } from "react";
@@ -11,40 +11,45 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Button } from "../ui/button";
+import Image from "next/image";
+import logo from '../../../public/logos/easysign.png'; 
 
 const Navbar = () => {
-  const [pro, setPro] = useState(false); 
+  const [pro, setPro] = useState(false);
   const name = "Sathyam";
 
   const buyPro = () => {
     setPro(true);
-  }
+  };
 
   return (
-    <div className="bg-white">
-      <div className="flex items-center justify-between py-4">
-        <div className="text-3xl font-bold ">E</div>
+    <div className="bg-white px-14 border-b ">
+      <div className="flex items-center justify-between py-3">
+        <Image src={logo} alt="logo" width={80} height={80}/>
         <div className="flex items-center gap-7">
           {!pro && (
             <div className="flex items-center justify-center gap-2">
               <div className="font-semibold text-sm ">2-day free trial 👉🏼 </div>
-              <Button onClick={buyPro} className="bg-[#ff7f4a] rounded-xl text-black px-2.5 py-1.5 text-sm font-normal border-2 border-black shadow-[2px_2px_0_0_#000] hover:shadow-[4px_4px_0_0_#000]">
+              <Button
+                onClick={buyPro}
+                className="bg-[#ff7f4a] rounded-xl text-black px-2.5 py-1.5 text-sm font-normal border-2 border-black shadow-[2px_2px_0_0_#000] hover:shadow-[4px_4px_0_0_#000]"
+              >
                 Buy PRO
               </Button>
             </div>
           )}
           <div className="border rounded-full p-2 border-orange-400 bg-orange-50 cursor-pointer">
-            <GiftIcon className="h-4 w-4 text-orange-400"/>
+            <GiftIcon className="h-4 w-4 text-orange-400" />
           </div>
           <div className="border rounded-full p-2 border-gray-400 cursor-pointer">
-            <BellIcon className="h-4 w-4 text-gray-400"/>
+            <BellIcon className="h-4 w-4 text-gray-400" />
           </div>
           <div>Hi, {name}</div>
           <div>
             <DropdownMenu>
               <DropdownMenuTrigger>
                 <div className="p-2 text-gray-400 border border-gray-400 rounded-full cursor-pointer flex items-center justify-center">
-                    <UserIcon className="h-4 w-4 text-gray-400"/>
+                  <UserIcon className="h-4 w-4 text-gray-400" />
                 </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
