@@ -16,10 +16,14 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 type DocumentHeaderProps = {
   fileName: string;
-  fileStatus: string;
+  fileStatus?: string;
   onPreview?: () => void;
   onRename?: () => void;
   renameDisabled?: boolean;
+  syncStatus?: {
+    syncedCount: number;
+    pendingCount: number;
+  };
 };
 
 const DocumentHeader = ({
@@ -28,8 +32,11 @@ const DocumentHeader = ({
   onPreview,
   onRename,
   renameDisabled,
+  syncStatus,
 }: DocumentHeaderProps) => {
   const router = useRouter();
+
+  const isSyncing = syncStatus && syncStatus.pendingCount > 0;
 
   return (
     <div className="bg-white border-b py-3.5 px-5 border-gray-200 backdrop-blur-sm">
@@ -58,17 +65,52 @@ const DocumentHeader = ({
               {fileName}
             </button>
             <div className="flex items-center gap-2">
-              <span
-                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  fileStatus.toLowerCase() === "pending"
-                    ? "bg-yellow-100 text-yellow-800"
-                    : fileStatus.toLowerCase() === "completed"
-                    ? "bg-green-100 text-green-800"
-                    : "bg-blue-100 text-blue-800"
-                }`}
-              >
-                {fileStatus}
-              </span>
+              {fileStatus && (
+                <span
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    fileStatus.toLowerCase() === "pending"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : fileStatus.toLowerCase() === "completed"
+                      ? "bg-green-100 text-green-800"
+                      : "bg-blue-100 text-blue-800"
+                  }`}
+                >
+                  {fileStatus}
+                </span>
+              )}
+              {syncStatus && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span
+                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        isSyncing
+                          ? "bg-blue-100 text-blue-800"
+                          : "bg-green-100 text-green-800"
+                      }`}
+                    >
+                      {isSyncing ? (
+                        <>
+                          <div className="animate-spin rounded-full h-2 w-2 border border-blue-800 border-t-transparent" />
+                          Syncing...
+                        </>
+                      ) : (
+                        <>
+                          <CloudCheck className="h-3 w-3" />
+                          Saved
+                        </>
+                      )}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      {syncStatus.syncedCount} field
+                      {syncStatus.syncedCount !== 1 ? "s" : ""} saved
+                      {syncStatus.pendingCount > 0 &&
+                        `, ${syncStatus.pendingCount} pending`}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
             </div>
           </div>
         </div>

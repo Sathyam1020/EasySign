@@ -1,13 +1,28 @@
 export type PlacedSignature = {
-  x: number;
-  y: number;
-  fontSize: number;
   id: string;
   email: string;
-  color: string;
+
+  // Position & Size
+  x: number;
+  y: number;
   width: number;
   height: number;
   page: number;
+
+  // Styling
+  fontSize: number;
+  fontFamily?: string;
+  color: string;
+  alignment?: "left" | "center" | "right";
+
+  // Field metadata
+  fieldType?: "signature" | "initials" | "date" | "text" | "checkbox";
+  required?: boolean;
+  placeholder?: string;
+
+  // Signing data
+  value?: string | null;
+  signedAt?: Date | null;
 };
 
 export type DragState = {

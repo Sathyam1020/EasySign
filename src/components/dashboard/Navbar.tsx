@@ -1,6 +1,6 @@
 "use client";
 
-import { BellIcon, GiftIcon, UserIcon } from "lucide-react";
+import { BellIcon, BuildingIcon, ChevronDownIcon, GiftIcon, UserIcon } from "lucide-react";
 import React, { useState } from "react";
 import {
   DropdownMenu,
@@ -12,7 +12,7 @@ import {
 } from "../ui/dropdown-menu";
 import { Button } from "../ui/button";
 import Image from "next/image";
-import logo from '../../../public/logos/easysign.png'; 
+import logo from "../../../public/logos/easysign.png";
 
 const Navbar = () => {
   const [pro, setPro] = useState(false);
@@ -23,9 +23,18 @@ const Navbar = () => {
   };
 
   return (
-    <div className="bg-white px-14 border-b ">
-      <div className="flex items-center justify-between py-3">
-        <Image src={logo} alt="logo" width={80} height={80}/>
+    <div className="max-w-7xl mx-auto ">
+      <div className="flex items-center justify-between py-2">
+        <div className="flex items-center gap-3">
+          <Image src={logo} alt="logo" width={90} height={90} />
+          <div className="px-3 py-2 border border-gray-300 bg-white hover:bg-gray-50 transition-all duration-200  rounded-xl cursor-pointer flex items-center gap-1 shadow-sm">
+            <BuildingIcon className="text-gray-600 h-4 w-4" />
+            <div className="text-sm font-medium text-gray-600">
+              Workspace
+            </div>
+            <ChevronDownIcon className="text-gray-600 h-4 w-4" />
+          </div>
+        </div>
         <div className="flex items-center gap-7">
           {!pro && (
             <div className="flex items-center justify-center gap-2">

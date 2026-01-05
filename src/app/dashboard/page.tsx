@@ -127,7 +127,7 @@ export default function Page() {
       </Dialog>
 
       {/* ===================== DASHBOARD ===================== */}
-      <div className="border-b border-white">
+      <div className="border-b bg-white">
         <div className="">
           <Navbar />
         </div>

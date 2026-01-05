@@ -1,6 +1,7 @@
 // components/documents/DocumentRightColumn.tsx
 "use client";
 
+import React from "react";
 import { useUser } from "@/hooks/useUser";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -15,7 +16,15 @@ import {
 import { PlusIcon, InfoIcon, User as UserIcon, Trash2Icon } from "lucide-react";
 import { useRecipients } from "./RecipientsProvider";
 
-const DocumentRightColumn = () => {
+interface DocumentRightColumnProps {
+  onRemoveSigner?: (recipientId: string) => Promise<void>;
+  currentUserSignerId?: string; // The actual database signer ID for the current user
+}
+
+const DocumentRightColumn = ({
+  onRemoveSigner,
+  currentUserSignerId,
+}: DocumentRightColumnProps) => {
   const { user, isLoading: userLoading } = useUser();
   const {
     recipients,
@@ -26,12 +35,36 @@ const DocumentRightColumn = () => {
     setEnableSigningOrder,
   } = useRecipients();
 
+  // Track which email fields have been touched (user interacted with them)
+  const [touchedEmails, setTouchedEmails] = React.useState<Set<string>>(
+    new Set()
+  );
+
+  const markEmailTouched = (recipientId: string) => {
+    setTouchedEmails((prev) => new Set([...prev, recipientId]));
+  };
+
+  console.log(
+    "[DocumentRightColumn] hasAddedSelf:",
+    hasAddedSelf,
+    "currentUserSignerId:",
+    currentUserSignerId,
+    "onRemoveSigner:",
+    !!onRemoveSigner
+  );
+
   const normalizeOrders = (list: typeof recipients) => {
     const len = list.length || 1;
     return list.map((r, idx) => ({
       ...r,
       signingOrder: Math.min(len, Math.max(1, r.signingOrder ?? idx + 1)),
     }));
+  };
+
+  // Email validation helper
+  const isValidEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email.trim());
   };
 
   const addCurrentUser = () => {
@@ -69,13 +102,34 @@ const DocumentRightColumn = () => {
     );
   };
 
-  const removeRecipient = (id: string) => {
+  const removeRecipient = async (id: string) => {
     const removed = recipients.find((r) => r.id === id);
+    const originalRecipients = recipients; // Save original for rollback
     const filtered = recipients.filter((r) => r.id !== id);
     setRecipients(normalizeOrders(filtered));
 
     if (removed?.isCurrentUser) {
       setHasAddedSelf(false);
+    }
+
+    // Delete from database if onRemoveSigner is provided and signer exists
+    if (onRemoveSigner && removed) {
+      try {
+        await onRemoveSigner(id);
+        console.log(`Successfully deleted signer ${id}`);
+      } catch (error) {
+        console.error("Failed to delete signer from database:", error);
+        // Re-add to state if deletion failed
+        setRecipients(normalizeOrders(originalRecipients));
+        if (removed?.isCurrentUser) {
+          setHasAddedSelf(true);
+        }
+        alert(
+          `Failed to delete signer: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`
+        );
+      }
     }
   };
 
@@ -95,9 +149,11 @@ const DocumentRightColumn = () => {
 
       {/* Add Buttons */}
       <div className="flex gap-3 py-3 px-5 shrink-0">
-        {hasAddedSelf ? (
+        {hasAddedSelf && currentUserSignerId ? (
           <Button
-            onClick={() => removeRecipient(`user-${user?.id}`)}
+            onClick={() =>
+              removeRecipient(currentUserSignerId).catch(console.error)
+            }
             className="flex-1 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-semibold hover:bg-red-100"
           >
             <Trash2Icon className="mr-2 h-4 w-4" />
@@ -257,10 +313,24 @@ const DocumentRightColumn = () => {
                       onChange={(e) =>
                         updateRecipient(recipient.id, "email", e.target.value)
                       }
+                      onBlur={() => markEmailTouched(recipient.id)}
                       placeholder="Enter email"
                       disabled={recipient.isCurrentUser}
-                      className="mt-1 h-9 text-sm"
+                      className={`mt-1 h-9 text-sm ${
+                        recipient.email &&
+                        touchedEmails.has(recipient.id) &&
+                        !isValidEmail(recipient.email)
+                          ? "border-red-300 bg-red-50"
+                          : ""
+                      }`}
                     />
+                    {recipient.email &&
+                      touchedEmails.has(recipient.id) &&
+                      !isValidEmail(recipient.email) && (
+                        <p className="mt-1 text-xs text-red-600 font-medium">
+                          Invalid email format
+                        </p>
+                      )}
                   </div>
                 </div>
               </div>
