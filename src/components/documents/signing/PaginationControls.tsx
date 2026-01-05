@@ -17,7 +17,7 @@ const PaginationControls = ({
   if (numPages <= 1) return null;
 
   return (
-    <div className="rounded-full flex items-center justify-center gap-3 px-3 py-2 bg-[#f3f4f6] sticky top-0 z-10 mb-4">
+    <div className="rounded-xl flex items-center justify-center gap-3 px-3 py-2 bg-[#f3f4f6] sticky top-0 z-10 mb-4">
       <Button
         onClick={onPrev}
         disabled={currentPage === 1}

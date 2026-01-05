@@ -441,7 +441,7 @@ function DocumentViewerInner() {
         }, [signatures, selectedSignatureId]);
 
         return (
-          <div className="flex flex-col h-screen bg-gray-100">
+          <div className="flex flex-col h-screen bg-white">
             {/* Header */}
             <DocumentHeader
               fileName={meta?.fileName || "Untitled"}

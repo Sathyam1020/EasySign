@@ -150,7 +150,7 @@ export default function Page() {
               className="px-3 py-2 shadow-sm flex gap-2 rounded-xl bg-[#364152]"
               onClick={() => setUploadModalOpen(true)}
             >
-             <Plus className="h-4 w-4"/> New File
+             <Plus className="h-4 w-4"/> Add document 
             </Button>
           </div>
         </div>
