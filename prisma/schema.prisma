@@ -15,14 +15,14 @@ datasource db {
 
 // ---------- ENUMS ----------
 enum DocumentStatus {
-  pending
-  partially_signed
-  completed
+  draft      // Document being set up, fields being placed/designed
+  pending    // Fields finalized, awaiting signer signatures
+  completed  // Document fully signed
 }
 
 enum SignerStatus {
-  draft      // Signer assigned, fields being placed/designed
-  pending    // Fields finalized, awaiting signature
+  pending    // Mail received by the user
+  seen       // Signer clicked on the link
   signed     // Signer has completed signing
 }
 
@@ -145,7 +145,7 @@ model Document {
   fileSize  Int
   pageCount Int         @default(1)  // Total pages in document
 
-  status    DocumentStatus @default(pending)
+  status    DocumentStatus @default(draft)
 
   trackingToken String @unique
 
@@ -177,7 +177,7 @@ model Signer {
   order      Int      @default(0)  // Signing order (0 = all can sign simultaneously)
 
   signingToken String @unique
-  status       SignerStatus @default(draft)
+  status       SignerStatus @default(pending)
   signedAt     DateTime?
 
   createdAt DateTime @default(now())

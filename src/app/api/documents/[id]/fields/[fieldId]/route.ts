@@ -57,18 +57,18 @@ export async function PATCH(
       `[PATCH Field] Updating field ${fieldId} in document ${documentId}`
     );
 
-    // Only allow updates if signer is still in draft mode
-    const signer = await prisma.signer.findUnique({
-      where: { id: field.signerId },
-    });
+    // Only allow updates if document is still in draft mode
+    // const document = await prisma.document.findUnique({
+    //   where: { id: documentId },
+    // });
 
     console.log(
-      `[PATCH Field] Signer ${field.signerId} status: ${signer?.status}`
+      `[PATCH Field] Document ${documentId} status: ${document?.status}`
     );
 
-    if (signer?.status !== "draft") {
+    if (document?.status !== "draft") {
       console.log(
-        `[PATCH Field] Cannot update - signer status is "${signer?.status}", not "draft"`
+        `[PATCH Field] Cannot update - document status is "${document?.status}", not "draft"`
       );
       return NextResponse.json(
         {
@@ -180,12 +180,12 @@ export async function DELETE(
       return NextResponse.json({ error: "Field not found" }, { status: 404 });
     }
 
-    // Only allow deletion if signer is still in draft mode
-    const signer = await prisma.signer.findUnique({
-      where: { id: field.signerId },
-    });
+    // Only allow deletion if document is still in draft mode
+    // const document = await prisma.document.findUnique({
+    //   where: { id: documentId },
+    // });
 
-    if (signer?.status !== "draft") {
+    if (document?.status !== "draft") {
       return NextResponse.json(
         {
           error: "Cannot delete fields after document is finalized",

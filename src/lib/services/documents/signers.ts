@@ -15,7 +15,7 @@ export interface Signer {
   email: string;
   name: string;
   order: number;
-  status: "draft" | "pending" | "signed";
+  status: "pending" | "seen" | "signed";
   signingToken: string;
   fieldCount: number;
   createdAt: string;

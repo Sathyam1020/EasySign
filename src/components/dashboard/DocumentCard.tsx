@@ -6,6 +6,9 @@ import {
   Ellipsis,
   PencilIcon,
   TrashIcon,
+  File,
+  Clock,
+  CheckCircle2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -85,6 +88,18 @@ export function DocumentCard({
     );
   };
 
+  const handleDelete = () => {
+    deleteMutation.mutate(id, {
+      onSuccess: () => {
+        setDeleteOpen(false);
+        toast.success("Document deleted");
+      },
+      onError: () => {
+        toast.error("Failed to delete document");
+      },
+    });
+  };
+
   return (
     <>
       <div className="group relative rounded-2xl overflow-hidden bg-white w-72 shadow-md hover:shadow-lg transition-all duration-200">
@@ -129,7 +144,20 @@ export function DocumentCard({
 
         {/* Footer */}
         <div className="flex justify-between items-center px-4 py-4">
-          <div className="text-xs text-yellow-700 bg-yellow-100 px-2 py-1 rounded-full font-medium">
+          <div
+            className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-full font-medium capitalize ${
+              status === "draft"
+                ? "text-yellow-900 bg-yellow-200"
+                : status === "pending"
+                ? "text-blue-900 bg-blue-200"
+                : status === "completed"
+                ? "text-green-900 bg-green-200"
+                : "text-gray-700 bg-gray-200"
+            }`}
+          >
+            {status === "draft" && <File className="h-3 w-3" />}
+            {status === "pending" && <Clock className="h-3 w-3" />}
+            {status === "completed" && <CheckCircle2 className="h-3 w-3" />}
             {status}
           </div>
 
@@ -140,7 +168,7 @@ export function DocumentCard({
               </button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end" className="w-48 rounded-xl">
+            <DropdownMenuContent align="end" className="w-full rounded-xl">
               <DropdownMenuLabel className="text-xs text-gray-500 p-2.5">
                 Actions
               </DropdownMenuLabel>
@@ -159,12 +187,12 @@ export function DocumentCard({
                 onClick={() => canDelete && setDeleteOpen(true)}
                 className={`p-2.5 flex items-center gap-2 ${
                   canDelete
-                    ? "text-red-600 hover:bg-red-50 cursor-pointer"
+                    ? "text-red-600 focus:bg-red-50 focus:text-red-600 hover:bg-red-50 hover:text-red-600 cursor-pointer"
                     : "text-gray-400 cursor-not-allowed"
                 }`}
               >
-                <TrashIcon className="h-4 w-4" />
-                Delete
+                <TrashIcon className="h-4 w-4 hover:text-red-600" />
+                {deleteMutation.isPending ? "Deleting..." : "Delete"}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -210,7 +238,10 @@ export function DocumentCard({
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <DialogContent className="rounded-3xl p-0 max-w-md">
+        <DialogContent 
+          className="rounded-3xl p-0 max-w-md"
+          onInteractOutside={(e) => e.preventDefault()}
+        >
           <div className="px-6 pt-6 pb-4">
             <h2 className="text-xl font-semibold text-gray-900">
               Delete document?
@@ -219,22 +250,16 @@ export function DocumentCard({
               This action cannot be undone.
             </p>
           </div>
-          <div className="border-t bg-gray-50 px-6 py-3 flex justify-end gap-3">
+          <div className="border-t bg-gray-50 px-6 py-3 flex justify-end gap-3 rounded-b-3xl">
             <Button variant="outline" onClick={() => setDeleteOpen(false)}>
               Cancel
             </Button>
             <Button
               variant="destructive"
-              onClick={() =>
-                deleteMutation.mutate(id, {
-                  onSuccess: () => {
-                    setDeleteOpen(false);
-                    toast.success("Document deleted");
-                  },
-                })
-              }
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
             >
-              Delete
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
             </Button>
           </div>
         </DialogContent>

@@ -61,6 +61,24 @@ const DocumentRightColumn = ({
     }));
   };
 
+  // Handle signing order toggle
+  const handleToggleSigningOrder = (enabled: boolean) => {
+    setEnableSigningOrder(enabled);
+
+    if (enabled) {
+      // When enabling: assign sequential orders
+      setRecipients(normalizeOrders(recipients));
+    } else {
+      // When disabling: set all orders to 0 for simultaneous signing
+      setRecipients(
+        recipients.map((r) => ({
+          ...r,
+          signingOrder: 0,
+        }))
+      );
+    }
+  };
+
   // Email validation helper
   const isValidEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -190,7 +208,7 @@ const DocumentRightColumn = ({
             <Checkbox
               id="signing-order"
               checked={enableSigningOrder}
-              onCheckedChange={(checked) => setEnableSigningOrder(!!checked)}
+              onCheckedChange={(checked) => handleToggleSigningOrder(!!checked)}
             />
             <Label
               htmlFor="signing-order"

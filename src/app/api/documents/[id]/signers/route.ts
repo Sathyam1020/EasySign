@@ -131,15 +131,11 @@ export async function POST(
     }
 
     // Check if document is still in draft (signers can only be added to draft documents)
-    const existingSigners = await prisma.signer.findMany({
-      where: { id },
-    });
+    // const document = await prisma.document.findUnique({
+    //   where: { id },
+    // });
 
-    const hasPendingOrSignedSigners = existingSigners.some(
-      (s) => s.status !== "draft"
-    );
-
-    if (hasPendingOrSignedSigners) {
+    if (document?.status !== "draft") {
       return NextResponse.json(
         {
           error:
@@ -174,7 +170,6 @@ export async function POST(
         email: email.toLowerCase(),
         name,
         order: order ?? 0,
-        status: "draft",
         signingToken,
       },
       include: {

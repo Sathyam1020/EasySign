@@ -21,6 +21,7 @@ interface SignerInfo {
   signerId: string | null;
   isCreating: boolean;
   error: string | null;
+  signingOrder?: number;
 }
 
 /**
@@ -51,6 +52,7 @@ export function useSignerManagement(documentId: string) {
           signerId: dbSigner.id,
           isCreating: false,
           error: null,
+          signingOrder: dbSigner.order,
         });
       });
 
@@ -87,6 +89,7 @@ export function useSignerManagement(documentId: string) {
           signerId: null,
           isCreating: true,
           error: null,
+          signingOrder: recipient.signingOrder,
         });
         return newMap;
       });
@@ -108,6 +111,7 @@ export function useSignerManagement(documentId: string) {
             signerId: data.id,
             isCreating: false,
             error: null,
+            signingOrder: data.order,
           });
           return newMap;
         });
@@ -127,6 +131,7 @@ export function useSignerManagement(documentId: string) {
             signerId: null,
             isCreating: false,
             error: errorMsg,
+            signingOrder: recipient.signingOrder,
           });
           return newMap;
         });

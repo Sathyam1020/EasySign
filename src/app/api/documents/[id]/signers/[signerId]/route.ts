@@ -52,8 +52,12 @@ export async function PATCH(
       return NextResponse.json({ error: "Signer not found" }, { status: 404 });
     }
 
-    // Only allow updates if signer is in draft mode
-    if (signer.status !== "draft") {
+    // Only allow updates if document is in draft mode
+    // const document = await prisma.document.findUnique({
+    //   where: { id: documentId },
+    // });
+
+    if (document?.status !== "draft") {
       return NextResponse.json(
         {
           error: "Cannot modify signer after document is finalized",
@@ -166,14 +170,16 @@ export async function DELETE(
       return NextResponse.json({ error: "Signer not found" }, { status: 404 });
     }
 
-    console.log(
-      `[DELETE Signer] Signer found. ID: ${signerId}, Status: ${signer.status}`
-    );
+    console.log(`[DELETE Signer] Signer found. ID: ${signerId}`);
 
-    // Only allow deletion if signer is in draft mode
-    if (signer.status !== "draft") {
+    // Only allow deletion if document is in draft mode
+    // const document = await prisma.document.findUnique({
+    //   where: { id: documentId },
+    // });
+
+    if (document?.status !== "draft") {
       console.log(
-        `[DELETE Signer] Cannot delete - signer status is "${signer.status}", not "draft"`
+        `[DELETE Signer] Cannot delete - document status is "${document?.status}", not "draft"`
       );
       return NextResponse.json(
         {

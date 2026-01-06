@@ -1,7 +1,7 @@
 // app/documents/[id]/page.tsx
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useParams } from "next/navigation";
 import DocumentHeader from "@/components/documents/DocumentHeader";
 import DocumentLeftCol from "@/components/documents/DocumentLeftCol";
@@ -17,6 +17,7 @@ import {
   getDocumentMeta,
   getDocumentViewUrl,
 } from "@/lib/services/documents/documents";
+import { updateSigner } from "@/lib/services/documents/signers";
 import { useRenameDocument } from "@/hooks/useRenameDocument";
 import { useSignerManagement } from "@/hooks/useSignerManagement";
 import { useUser } from "@/hooks/useUser";
@@ -24,6 +25,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { PlacedSignature } from "@/components/documents/signing/types";
+import { toast } from "sonner";
 
 export default function DocumentViewer() {
   return (
@@ -41,6 +43,7 @@ function DocumentViewerInner() {
     recipients,
     setRecipients,
     setHasAddedSelf,
+    setEnableSigningOrder,
   } = useRecipients();
   const { user } = useUser();
 
@@ -110,13 +113,21 @@ function DocumentViewerInner() {
             email: signer.email,
             name: signer.name,
             isCurrentUser,
-            signingOrder: 1, // Default signing order
+            signingOrder: signer.signingOrder ?? 0, // Use actual order from database
           };
         });
 
       if (loadedRecipients.length > 0) {
         setRecipients(loadedRecipients);
         setHasLoadedFromDb(true);
+
+        // Determine if signing order is enabled (any signer has order > 0)
+        const hasSigningOrder = loadedRecipients.some(
+          (r) => (r.signingOrder ?? 0) > 0
+        );
+        if (hasSigningOrder) {
+          setEnableSigningOrder(true);
+        }
 
         // Check if current user is in the loaded signers
         const currentUserInSigners = loadedRecipients.some(
@@ -133,8 +144,18 @@ function DocumentViewerInner() {
     setRecipients,
     user,
     setHasAddedSelf,
+    setEnableSigningOrder,
     hasLoadedFromDb,
   ]);
+
+  // Helper function to update signer order
+  const updateSignerOrder = async (
+    docId: string,
+    signerId: string,
+    updates: { order: number }
+  ) => {
+    return updateSigner(docId, signerId, updates);
+  };
 
   // Get current user's signer ID for removal
   const currentUserSignerId = useMemo(() => {
@@ -170,14 +191,26 @@ function DocumentViewerInner() {
     return emailRegex.test(email.trim());
   };
 
-  // Debounced sync - waits 3 seconds after changes stop before syncing to DB
-  useEffect(() => {
-    const debounceTimer = setTimeout(async () => {
-      if (recipients.length === 0) return;
+  // Track previous recipients to detect what changed
+  const prevRecipientsRef = useRef<typeof recipients | null>(null);
 
-      // Only sync recipients that have both email and name filled in AND valid email
-      // AND don't already have a signer ID in the database
-      const completedRecipients = recipients.filter((r) => {
+  // Detect what changed: order only (500ms) or email/name (1500ms)
+  const getDebounceDelay = () => {
+    if (!prevRecipientsRef.current) return 500;
+
+    const onlyOrderChanged = recipients.every((r, i) => {
+      const prev = prevRecipientsRef.current?.[i];
+      if (!prev) return false;
+      return r.email === prev.email && r.name === prev.name;
+    });
+
+    return onlyOrderChanged ? 500 : 1500;
+  };
+
+  // Get only the recipients that changed
+  const getChangedExistingRecipients = () => {
+    if (!prevRecipientsRef.current) {
+      return recipients.filter((r) => {
         const hasValidEmail =
           r.email &&
           r.email.trim() &&
@@ -185,45 +218,113 @@ function DocumentViewerInner() {
           r.name.trim() &&
           isValidEmail(r.email);
 
-        // Skip if already has a signer ID (already synced)
         const signerId = getSignerIdByEmail(r.email);
-        return hasValidEmail && !signerId;
+        return hasValidEmail && !!signerId;
       });
+    }
 
-      if (completedRecipients.length === 0) return;
+    return recipients.filter((r) => {
+      const hasValidEmail =
+        r.email &&
+        r.email.trim() &&
+        r.name &&
+        r.name.trim() &&
+        isValidEmail(r.email);
+
+      const signerId = getSignerIdByEmail(r.email);
+      if (!hasValidEmail || !signerId) return false;
+
+      // Check if this recipient changed by ID, not by index
+      const prevRecipient = prevRecipientsRef.current?.find(
+        (p) => p.id === r.id
+      );
+      if (!prevRecipient) return true;
+
+      return (
+        r.email !== prevRecipient.email ||
+        r.name !== prevRecipient.name ||
+        r.signingOrder !== prevRecipient.signingOrder
+      );
+    });
+  };
+
+  // Debounced sync - different delays based on what changed
+  useEffect(() => {
+    const debounceDelay = getDebounceDelay();
+    const debounceTimer = setTimeout(async () => {
+      if (recipients.length === 0) return;
 
       try {
-        // Final validation before syncing - ensure all recipients still have valid email/name
-        const validRecipientsToSync = completedRecipients.filter((r) => {
-          const isValid =
-            r.email?.trim() && r.name?.trim() && isValidEmail(r.email);
+        // Split recipients into new (no signer ID) and existing (has signer ID)
+        const newRecipients = recipients.filter((r) => {
+          const hasValidEmail =
+            r.email &&
+            r.email.trim() &&
+            r.name &&
+            r.name.trim() &&
+            isValidEmail(r.email);
 
-          if (!isValid) {
-            console.warn(
-              `Skipping incomplete recipient: ${r.email || "no-email"}`
-            );
-          }
-
-          return isValid;
+          const signerId = getSignerIdByEmail(r.email);
+          return hasValidEmail && !signerId;
         });
 
-        if (validRecipientsToSync.length === 0) return;
+        const changedExistingRecipients = getChangedExistingRecipients();
 
-        await syncRecipients(
-          validRecipientsToSync.map((r) => ({
-            id: r.id,
-            email: r.email,
-            name: r.name || r.email,
-            signingOrder: r.signingOrder,
-          }))
-        );
+        // Sync new recipients
+        if (newRecipients.length > 0) {
+          const validNewRecipients = newRecipients.filter((r) => {
+            const isValid =
+              r.email?.trim() && r.name?.trim() && isValidEmail(r.email);
+
+            if (!isValid) {
+              console.warn(
+                `Skipping incomplete recipient: ${r.email || "no-email"}`
+              );
+            }
+
+            return isValid;
+          });
+
+          if (validNewRecipients.length > 0) {
+            await syncRecipients(
+              validNewRecipients.map((r) => ({
+                id: r.id,
+                email: r.email,
+                name: r.name || r.email,
+                signingOrder: r.signingOrder,
+              }))
+            );
+          }
+        }
+
+        // Update only the changed existing signers
+        if (changedExistingRecipients.length > 0) {
+          for (const recipient of changedExistingRecipients) {
+            const signerId = getSignerIdByEmail(recipient.email);
+            if (signerId) {
+              try {
+                await updateSignerOrder(documentId, signerId, {
+                  order: recipient.signingOrder ?? 0,
+                });
+              } catch (error) {
+                console.error(
+                  `Failed to update signer order for ${recipient.email}:`,
+                  error
+                );
+              }
+            }
+          }
+        }
       } catch (err) {
         console.error("Failed to sync recipients:", err);
       }
-    }, 3000); // Wait 3 seconds after changes stop
+    }, debounceDelay); // Wait 500ms for order changes, 1500ms for email/name changes
 
     // Clean up timer if recipients change again before the delay completes
-    return () => clearTimeout(debounceTimer);
+    return () => {
+      clearTimeout(debounceTimer);
+      prevRecipientsRef.current = recipients;
+    };
   }, [
     recipients,
     syncRecipients,
@@ -301,7 +402,11 @@ function DocumentViewerInner() {
           setMeta((prev: any) =>
             prev ? { ...prev, fileName: trimmed } : prev
           );
+          toast.success("Document renamed successfully");
           setRenameOpen(false);
+        },
+        onError: (error: any) => {
+          toast.error(error?.message || "Failed to rename document");
         },
       }
     );

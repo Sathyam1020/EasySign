@@ -69,12 +69,9 @@ export async function POST(
       }
     }
 
-    // Update all signers from draft to pending
-    const updatedSigners = await prisma.signer.updateMany({
-      where: {
-        documentId,
-        status: "draft",
-      },
+    // Update document from draft to pending
+    const updatedDocument = await prisma.document.update({
+      where: { id: documentId },
       data: {
         status: "pending",
       },
@@ -94,7 +91,7 @@ export async function POST(
     return NextResponse.json(
       {
         message: "Document finalized successfully",
-        updatedSigners: updatedSigners.count,
+        document: updatedDocument,
       },
       { status: 200 }
     );

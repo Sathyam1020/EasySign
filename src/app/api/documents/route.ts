@@ -18,7 +18,10 @@ export async function POST(req: NextRequest) {
 
     if (!fileName || !fileUrl || !fileSize || !key || !activeOrgId) {
       return NextResponse.json(
-        { error: "Missing required fields: fileName, fileUrl, fileSize, key, activeOrgId" },
+        {
+          error:
+            "Missing required fields: fileName, fileUrl, fileSize, key, activeOrgId",
+        },
         { status: 400 }
       );
     }
@@ -27,8 +30,11 @@ export async function POST(req: NextRequest) {
     const org = await prisma.organization.findUnique({
       where: { id: activeOrgId },
     });
-    if (!org || (org.ownerId !== session.user.id)) {
-      return NextResponse.json({ error: "Invalid organization access" }, { status: 403 });
+    if (!org || org.ownerId !== session.user.id) {
+      return NextResponse.json(
+        { error: "Invalid organization access" },
+        { status: 403 }
+      );
     }
 
     // 4. Create document (matches YOUR schema exactly)
@@ -40,7 +46,7 @@ export async function POST(req: NextRequest) {
         fileUrl,
         fileSize,
         trackingToken: randomUUID(),
-        status: "pending", 
+        status: "draft",
       },
     });
 
@@ -57,7 +63,10 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("Document save error:", error);
-    return NextResponse.json({ error: "Failed to save document" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to save document" },
+      { status: 500 }
+    );
   }
 }
 
@@ -99,6 +108,9 @@ export async function GET() {
 
     return NextResponse.json({ documents });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to fetch documents" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch documents" },
+      { status: 500 }
+    );
   }
 }
