@@ -11,6 +11,7 @@ import { UploadDocumentModal } from "@/components/dashboard/UploadDocument";
 import { countOrgs } from "@/lib/services/organisation/count";
 import { getDocumentsOfOrg } from "@/lib/services/documents/count";
 import { moveDocuments } from "@/lib/services/documents/documents";
+import { loadSigners } from "@/lib/services/documents/signers";
 
 import {
   Dialog,
@@ -43,6 +44,10 @@ export default function Page() {
   const [moveModalOpen, setMoveModalOpen] = useState(false);
   const [targetOrgId, setTargetOrgId] = useState("");
   const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>([]);
+  const [documentsWithRecipients, setDocumentsWithRecipients] = useState<any[]>(
+    []
+  );
+  const [isEnrichingDocuments, setIsEnrichingDocuments] = useState(false);
   const moveTriggerRef = useRef<HTMLButtonElement | null>(null);
   const [moveTriggerWidth, setMoveTriggerWidth] = useState<number>(0);
 
@@ -70,6 +75,39 @@ export default function Page() {
   useEffect(() => {
     setSelectedDocumentIds([]);
   }, [activeOrg]);
+
+  // Fetch signers for each document and enrich documents with recipients
+  useEffect(() => {
+    const enrichDocuments = async () => {
+      setIsEnrichingDocuments(true);
+      try {
+        const enriched = await Promise.all(
+          documents.map(async (doc: any) => {
+            try {
+              const signers = await loadSigners(doc.id);
+              return {
+                ...doc,
+                recipients: signers.map((s: any) => ({
+                  email: s.email,
+                  name: s.name,
+                })),
+              };
+            } catch (error) {
+              console.error(`Failed to load signers for ${doc.id}:`, error);
+              return { ...doc, recipients: [] };
+            }
+          })
+        );
+        setDocumentsWithRecipients(enriched);
+      } finally {
+        setIsEnrichingDocuments(false);
+      }
+    };
+
+    if (documents.length > 0) {
+      enrichDocuments();
+    }
+  }, [documents]);
 
   const moveTargets = useMemo(
     () => orgs.filter((o) => o.id !== activeOrg),
@@ -232,8 +270,8 @@ export default function Page() {
 
       <div className="max-w-7xl mx-auto">
         <DocumentsComponent
-          documents={documents}
-          isLoading={docsLoading}
+          documents={documentsWithRecipients}
+          isLoading={docsLoading || isEnrichingDocuments}
           selectedIds={new Set(selectedDocumentIds)}
           onToggleSelect={toggleSelection}
         />

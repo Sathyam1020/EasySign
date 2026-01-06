@@ -1,10 +1,10 @@
 "use client";
 
-import { PlacedSignature } from "@/components/documents/signing/types";
 import {
   getDocumentMeta,
   getDocumentViewUrl,
 } from "@/lib/services/documents/documents";
+import { usePreviewSignatureFields } from "@/hooks/usePreviewSignatureFields";
 import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -38,45 +38,32 @@ export default function PreviewPage() {
 
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [meta, setMeta] = useState<any>(null);
-  const [placedSignatures, setPlacedSignatures] = useState<PlacedSignature[]>(
-    []
-  );
-  console.log(placedSignatures, "placedSignatures");
   const [numPages, setNumPages] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Fetch signature fields from database using React Query
+  const { data: placedSignatures = [], isLoading: isLoadingFields } =
+    usePreviewSignatureFields(id);
+
+  // Load document metadata and PDF
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const raw =
-      localStorage.getItem("previewData") ??
-      sessionStorage.getItem("previewData");
-    if (!raw) {
-      setLoading(true);
-      // Fallback: load doc so at least PDF shows
-      Promise.all([getDocumentMeta(id), getDocumentViewUrl(id)])
-        .then(([metaRes, urlRes]) => {
-          setMeta(metaRes);
-          setPdfUrl(urlRes.viewUrl ?? urlRes.data?.url ?? null);
-        })
-        .catch((err: any) => setError(err?.message ?? "Failed to load preview"))
-        .finally(() => setLoading(false));
-      return;
-    }
+    const loadDocumentData = async () => {
+      try {
+        const [metaRes, urlRes] = await Promise.all([
+          getDocumentMeta(id),
+          getDocumentViewUrl(id),
+        ]);
 
-    try {
-      const parsed = JSON.parse(raw);
-      setPlacedSignatures(parsed.placedSignatures ?? []);
-      setNumPages(parsed.numPages ?? null);
-      setPdfUrl(parsed.pdfUrl ?? null);
-      setMeta(parsed.meta ?? null);
-      // keep data around for refreshes; do not remove
-    } catch (err: any) {
-      setError(err?.message ?? "Failed to parse preview data");
-    } finally {
-      setLoading(false);
-    }
+        setMeta(metaRes);
+        setPdfUrl(urlRes.viewUrl ?? urlRes.data?.url ?? null);
+      } catch (err: any) {
+        setError(err?.message ?? "Failed to load preview");
+      }
+    };
+
+    loadDocumentData();
   }, [id]);
 
   useEffect(() => {
@@ -87,7 +74,9 @@ export default function PreviewPage() {
     }
   }, []);
 
-  if (loading) {
+  const isLoading = isLoadingFields || !pdfUrl;
+
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-3">
@@ -109,7 +98,13 @@ export default function PreviewPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white overflow-y-auto">
+    <div className="min-h-screen bg-gray-100 overflow-y-auto">
+      <div className="bg-[#fefce8] max-w-3xl mx-auto p-3 rounded-lg mt-6 px-5 shadow-sm">
+        <div className="text-[#864d0f] text-lg font-semibold ">Preview Mode</div>
+        <div className="text-[#b07935] text-sm font-semibold mt-1">
+          Preview what the signed document will look like with placeholder data
+        </div>
+      </div>
       <div className="flex flex-col items-center p-3">
         {!pdfUrl ? (
           <div className="text-center text-gray-500">No preview available.</div>
@@ -130,7 +125,7 @@ export default function PreviewPage() {
                 <div className="flex flex-col gap-8">
                   {Array.from({ length: numPages }, (_, i) => i + 1).map(
                     (page) => (
-                      <div className="relative">
+                      <div key={page} className="relative">
                         <div className="p-2 mt-3 flex justify-center border border-gray-200 items-center rounded-xl bg-gray-50 relative">
                           <Page
                             pageNumber={page}
@@ -151,13 +146,12 @@ export default function PreviewPage() {
                                   width: s.width,
                                   height: s.height,
                                   transform: "translate(-45%, -30%)",
-                                  //   borderColor: s.color,
-                                  //   color: s.color,
                                   fontSize: s.fontSize,
                                   fontFamily:
                                     '"Pacifico", "Dancing Script", "Segoe Script", cursive',
                                   fontWeight: 600,
                                   letterSpacing: "0.03em",
+                                  zIndex: 10,
                                 }}
                               >
                                 Signature

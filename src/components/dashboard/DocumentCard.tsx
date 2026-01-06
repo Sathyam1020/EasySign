@@ -18,6 +18,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../ui/tooltip";
 import { Input } from "../ui/input";
 import { Dialog, DialogContent } from "../ui/dialog";
 import { Button } from "../ui/button";
@@ -30,6 +36,8 @@ type Props = {
   name: string;
   theme: { base: string; blob: string };
   status: string;
+  createdAt: string;
+  recipients?: Array<{ email: string; name: string }>;
   isSelected?: boolean;
   onSelectToggle?: (id: string, checked: boolean) => void;
 };
@@ -41,6 +49,8 @@ export function DocumentCard({
   name: initialName,
   theme,
   status,
+  createdAt,
+  recipients = [],
   isSelected = false,
   onSelectToggle,
 }: Props) {
@@ -100,9 +110,59 @@ export function DocumentCard({
     });
   };
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const isToday = date.toDateString() === today.toDateString();
+    const isYesterday = date.toDateString() === yesterday.toDateString();
+
+    if (isToday) {
+      return `Today ${date.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`;
+    } else if (isYesterday) {
+      return `Yesterday ${date.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`;
+    } else {
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year:
+          date.getFullYear() !== today.getFullYear() ? "numeric" : undefined,
+      });
+    }
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const avatarColors = [
+    "bg-blue-500",
+    "bg-purple-500",
+    "bg-pink-500",
+    "bg-green-500",
+    "bg-orange-500",
+    "bg-red-500",
+  ];
+
+  const getAvatarColor = (index: number) =>
+    avatarColors[index % avatarColors.length];
+
   return (
     <>
-      <div className="group relative rounded-2xl overflow-hidden bg-white w-72 shadow-md hover:shadow-lg transition-all duration-200">
+      <div className="group relative rounded-3xl overflow-hidden bg-white w-72 shadow-md hover:shadow-lg transition-all duration-200">
         {/* Custom Selection Checkbox - appears on hover or when selected */}
         <div
           onClick={(e) => e.stopPropagation()}
@@ -143,59 +203,112 @@ export function DocumentCard({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-between items-center px-4 py-4">
-          <div
-            className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-full font-medium capitalize ${
-              status === "draft"
-                ? "text-yellow-900 bg-yellow-200"
-                : status === "pending"
-                ? "text-blue-900 bg-blue-200"
-                : status === "completed"
-                ? "text-green-900 bg-green-200"
-                : "text-gray-700 bg-gray-200"
-            }`}
-          >
-            {status === "draft" && <File className="h-3 w-3" />}
-            {status === "pending" && <Clock className="h-3 w-3" />}
-            {status === "completed" && <CheckCircle2 className="h-3 w-3" />}
-            {status}
+        <div className="px-4 py-3 border-t space-y-2">
+          {/* Created Date */}
+          <div className="text-xs text-gray-400">{formatDate(createdAt)}</div>
+
+          {/* Status and Menu */}
+          <div className="flex justify-between items-center gap-1">
+            <div
+              className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-full font-medium capitalize whitespace-nowrap ${
+                status === "draft"
+                  ? "text-yellow-700 bg-yellow-100"
+                  : status === "pending"
+                  ? "text-blue-900 bg-blue-100"
+                  : status === "completed"
+                  ? "text-green-900 bg-green-100"
+                  : "text-gray-700 bg-gray-100"
+              }`}
+            >
+              {status === "draft" && <File className="h-3 w-3" />}
+              {status === "pending" && <Clock className="h-3 w-3" />}
+              {status === "completed" && <CheckCircle2 className="h-3 w-3" />}
+              {status}
+            </div>
+
+            {/* Recipients Avatars - Stack Horizontally */}
+            {recipients && recipients.length > 0 && (
+              <TooltipProvider>
+                <div className="relative flex items-center -space-x-2">
+                  {recipients.slice(0, 3).map((recipient, index) => (
+                    <Tooltip key={recipient.email}>
+                      <TooltipTrigger asChild>
+                        <div
+                          className={`w-6 h-6 rounded-full  flex items-center justify-center text-white text-xs font-semibold cursor-pointer hover:scale-110 transition-transform border ${getAvatarColor(
+                            index
+                          )}`}
+                          style={{
+                            zIndex: recipients.length - index,
+                          }}
+                        >
+                          {getInitials(recipient.name)}
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="text-xs">
+                        {recipient.name}
+                      </TooltipContent>
+                    </Tooltip>
+                  ))}
+                  {recipients.length > 3 && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div
+                          className="w-6 h-6 rounded-full flex items-center justify-center text-gray-700 text-xs font-semibold bg-gray-200 cursor-pointer hover:scale-110 transition-transform border border-white"
+                          style={{
+                            zIndex: 1,
+                          }}
+                        >
+                          +{recipients.length - 3}
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="text-xs">
+                        {recipients
+                          .slice(3)
+                          .map((r) => r.name)
+                          .join(", ")}
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
+              </TooltipProvider>
+            )}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="cursor-pointer hover:bg-gray-100 transition-all duration-200 p-1.5 rounded-lg text-gray-400 hover:text-gray-600">
+                  <Ellipsis className="text-gray-500 h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent align="end" className="w-full rounded-xl">
+                <DropdownMenuLabel className="text-xs text-gray-500 p-2.5">
+                  Actions
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+
+                <DropdownMenuItem
+                  onClick={() => setRenameOpen(true)}
+                  className="p-2.5 cursor-pointer flex items-center gap-2"
+                >
+                  <PencilIcon className="h-4 w-4" />
+                  Rename
+                </DropdownMenuItem>
+
+                <DropdownMenuItem
+                  disabled={!canDelete || deleteMutation.isPending}
+                  onClick={() => canDelete && setDeleteOpen(true)}
+                  className={`p-2.5 flex items-center gap-2 ${
+                    canDelete
+                      ? "text-red-600 focus:bg-red-50 focus:text-red-600 hover:bg-red-50 hover:text-red-600 cursor-pointer"
+                      : "text-gray-400 cursor-not-allowed"
+                  }`}
+                >
+                  <TrashIcon className="h-4 w-4 hover:text-red-600" />
+                  {deleteMutation.isPending ? "Deleting..." : "Delete"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="cursor-pointer hover:bg-gray-100 transition-all duration-200 p-2 rounded-full">
-                <Ellipsis className="text-gray-600 h-4 w-4" />
-              </button>
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent align="end" className="w-full rounded-xl">
-              <DropdownMenuLabel className="text-xs text-gray-500 p-2.5">
-                Actions
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-
-              <DropdownMenuItem
-                onClick={() => setRenameOpen(true)}
-                className="p-2.5 cursor-pointer flex items-center gap-2"
-              >
-                <PencilIcon className="h-4 w-4" />
-                Rename
-              </DropdownMenuItem>
-
-              <DropdownMenuItem
-                disabled={!canDelete || deleteMutation.isPending}
-                onClick={() => canDelete && setDeleteOpen(true)}
-                className={`p-2.5 flex items-center gap-2 ${
-                  canDelete
-                    ? "text-red-600 focus:bg-red-50 focus:text-red-600 hover:bg-red-50 hover:text-red-600 cursor-pointer"
-                    : "text-gray-400 cursor-not-allowed"
-                }`}
-              >
-                <TrashIcon className="h-4 w-4 hover:text-red-600" />
-                {deleteMutation.isPending ? "Deleting..." : "Delete"}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
 
         {/* Loading overlay during rename */}
@@ -238,7 +351,7 @@ export function DocumentCard({
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <DialogContent 
+        <DialogContent
           className="rounded-3xl p-0 max-w-md"
           onInteractOutside={(e) => e.preventDefault()}
         >

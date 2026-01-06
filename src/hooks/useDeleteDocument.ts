@@ -8,8 +8,11 @@ export function useDeleteDocument() {
   return useMutation({
     mutationFn: (documentId: string) => deleteDocument(documentId),
     onSuccess: (_, documentId) => {
-      // Refresh both the list and any document detail cache
-      queryClient.invalidateQueries({ queryKey: ["documents"] });
+      // Invalidate all documents queries with partial matching
+      queryClient.invalidateQueries({
+        queryKey: ["documents"],
+        exact: false, // This ensures it matches ["documents", activeOrg] etc.
+      });
       queryClient.invalidateQueries({ queryKey: ["document", documentId] });
     },
     onError: (error) => {

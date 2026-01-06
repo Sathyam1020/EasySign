@@ -5,6 +5,7 @@ export type DashboardDocument = {
   status: "draft" | "pending" | "completed";
   trackingToken: string;
   createdAt: string;
+  recipients?: Array<{ email: string; name: string }>;
 };
 
 export type Theme = {

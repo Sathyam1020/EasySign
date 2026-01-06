@@ -90,6 +90,8 @@ export default function DocumentsComponent({
             name={document.fileName}
             theme={document.theme}
             status={document.status}
+            createdAt={document.createdAt}
+            recipients={document.recipients || []}
             isSelected={selectedIds.has(document.id)}
             onSelectToggle={onToggleSelect}
           />
