@@ -65,11 +65,14 @@ export default function Page() {
   const activeOrg = orgData?.activeOrg ?? null;
 
   // 2️⃣ FETCH DOCUMENTS FOR ACTIVE ORG
-  const { data: documents = [], isLoading: docsLoading } = useQuery({
+  const { data: documentsData, isLoading: docsLoading } = useQuery({
     queryKey: ["documents", activeOrg],
     queryFn: getDocumentsOfOrg,
     enabled: !!activeOrg, // only fetch when org is ready
   });
+
+  // Stable documents array to avoid new reference on every render when data is undefined
+  const documents = useMemo(() => documentsData ?? [], [documentsData]);
 
   // Reset selection when workspace changes or data refreshes
   useEffect(() => {
@@ -103,9 +106,10 @@ export default function Page() {
         setIsEnrichingDocuments(false);
       }
     };
-
     if (documents.length > 0) {
       enrichDocuments();
+    } else {
+      setDocumentsWithRecipients([]);
     }
   }, [documents]);
 

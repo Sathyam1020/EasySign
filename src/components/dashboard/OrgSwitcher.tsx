@@ -81,7 +81,12 @@ export function OrgSwitcher() {
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["orgs"] });
-      await queryClient.invalidateQueries({ queryKey: ["documents"] });
+      // Drop any cached document lists so UI doesn't keep showing the old workspace
+      queryClient.removeQueries({ queryKey: ["documents"], exact: false });
+      await queryClient.invalidateQueries({
+        queryKey: ["documents"],
+        exact: false,
+      });
       await refetch();
     },
   });
@@ -118,7 +123,10 @@ export function OrgSwitcher() {
       toast.success("Workspace deleted");
       setOpenDelete(false);
       await queryClient.invalidateQueries({ queryKey: ["orgs"] });
-      await queryClient.invalidateQueries({ queryKey: ["documents"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["documents"],
+        exact: false,
+      });
       await refetch();
     },
     onError: (error: any) => {

@@ -209,69 +209,70 @@ export function DocumentCard({
 
           {/* Status and Menu */}
           <div className="flex justify-between items-center gap-1">
-            <div
-              className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-full font-medium capitalize whitespace-nowrap ${
-                status === "draft"
-                  ? "text-yellow-700 bg-yellow-100"
-                  : status === "pending"
-                  ? "text-blue-900 bg-blue-100"
-                  : status === "completed"
-                  ? "text-green-900 bg-green-100"
-                  : "text-gray-700 bg-gray-100"
-              }`}
-            >
-              {status === "draft" && <File className="h-3 w-3" />}
-              {status === "pending" && <Clock className="h-3 w-3" />}
-              {status === "completed" && <CheckCircle2 className="h-3 w-3" />}
-              {status}
+            <div className="flex items-center gap-2">
+              <div
+                className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-full font-medium capitalize whitespace-nowrap ${
+                  status === "draft"
+                    ? "text-yellow-700 bg-yellow-100"
+                    : status === "pending"
+                    ? "text-blue-900 bg-blue-100"
+                    : status === "completed"
+                    ? "text-green-900 bg-green-100"
+                    : "text-gray-700 bg-gray-100"
+                }`}
+              >
+                {status === "draft" && <File className="h-3 w-3" />}
+                {status === "pending" && <Clock className="h-3 w-3" />}
+                {status === "completed" && <CheckCircle2 className="h-3 w-3" />}
+                {status}
+              </div>
+              {/* Recipients Avatars - Stack Horizontally */}
+              {recipients && recipients.length > 0 && (
+                <TooltipProvider>
+                  <div className="relative flex items-center -space-x-2">
+                    {recipients.slice(0, 3).map((recipient, index) => (
+                      <Tooltip key={recipient.email}>
+                        <TooltipTrigger asChild>
+                          <div
+                            className={`w-6 h-6 rounded-full  flex items-center justify-center text-white text-xs font-semibold cursor-pointer hover:scale-110 transition-transform border ${getAvatarColor(
+                              index
+                            )}`}
+                            style={{
+                              zIndex: recipients.length - index,
+                            }}
+                          >
+                            {getInitials(recipient.name)}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="text-xs">
+                          {recipient.name}
+                        </TooltipContent>
+                      </Tooltip>
+                    ))}
+                    {recipients.length > 3 && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div
+                            className="w-6 h-6 rounded-full flex items-center justify-center text-gray-700 text-xs font-semibold bg-gray-200 cursor-pointer hover:scale-110 transition-transform border border-white"
+                            style={{
+                              zIndex: 1,
+                            }}
+                          >
+                            +{recipients.length - 3}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="text-xs">
+                          {recipients
+                            .slice(3)
+                            .map((r) => r.name)
+                            .join(", ")}
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
+                </TooltipProvider>
+              )}
             </div>
-
-            {/* Recipients Avatars - Stack Horizontally */}
-            {recipients && recipients.length > 0 && (
-              <TooltipProvider>
-                <div className="relative flex items-center -space-x-2">
-                  {recipients.slice(0, 3).map((recipient, index) => (
-                    <Tooltip key={recipient.email}>
-                      <TooltipTrigger asChild>
-                        <div
-                          className={`w-6 h-6 rounded-full  flex items-center justify-center text-white text-xs font-semibold cursor-pointer hover:scale-110 transition-transform border ${getAvatarColor(
-                            index
-                          )}`}
-                          style={{
-                            zIndex: recipients.length - index,
-                          }}
-                        >
-                          {getInitials(recipient.name)}
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="text-xs">
-                        {recipient.name}
-                      </TooltipContent>
-                    </Tooltip>
-                  ))}
-                  {recipients.length > 3 && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div
-                          className="w-6 h-6 rounded-full flex items-center justify-center text-gray-700 text-xs font-semibold bg-gray-200 cursor-pointer hover:scale-110 transition-transform border border-white"
-                          style={{
-                            zIndex: 1,
-                          }}
-                        >
-                          +{recipients.length - 3}
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="text-xs">
-                        {recipients
-                          .slice(3)
-                          .map((r) => r.name)
-                          .join(", ")}
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                </div>
-              </TooltipProvider>
-            )}
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
