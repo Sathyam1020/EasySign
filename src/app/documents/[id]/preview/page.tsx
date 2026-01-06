@@ -99,13 +99,23 @@ export default function PreviewPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 overflow-y-auto">
-      <div className="bg-[#fefce8] max-w-3xl mx-auto p-3 rounded-lg mt-6 px-5 shadow-sm">
-        <div className="text-[#864d0f] text-lg font-semibold ">Preview Mode</div>
-        <div className="text-[#b07935] text-sm font-semibold mt-1">
+      <div className="bg-[#fefce8] max-w-3xl mx-auto p-4 rounded-lg mt-6 px-5 shadow-sm">
+        <div className="text-[#864d0f] text-lg font-semibold">{placedSignatures.length} Signature {placedSignatures.length === 1 ? "Field" : "Fields"}</div>
+        <div className="text-[#b07935] text-sm font-semibold mt-1 mb-3">
           Preview what the signed document will look like with placeholder data
         </div>
+        {/* <div className="flex items-center gap-4 pt-3 border-t border-[#d4a373]">
+          <div className="flex-1">
+            <div className="text-[#864d0f] text-2xl font-bold">
+              {placedSignatures.length}
+            </div>
+            <div className="text-[#b07935] text-xs font-medium">
+              Signature {placedSignatures.length === 1 ? "Field" : "Fields"}
+            </div>
+          </div>
+        </div> */}
       </div>
-      <div className="flex flex-col items-center p-3">
+      <div className="flex flex-col items-center p-3 shadow-sm ">
         {!pdfUrl ? (
           <div className="text-center text-gray-500">No preview available.</div>
         ) : (
