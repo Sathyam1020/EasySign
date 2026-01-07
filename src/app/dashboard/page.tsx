@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  useState,
-  useEffect,
-  useMemo,
-  useRef,
-  useLayoutEffect,
-  useDeferredValue,
-} from "react";
+import { useState, useEffect, useMemo, useRef, useLayoutEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import Navbar from "@/components/dashboard/Navbar";
@@ -38,7 +31,7 @@ import {
 
 import { toast } from "sonner";
 import { createOrg } from "@/lib/services/organisation/organisation";
-import { FilterIcon, Plus } from "lucide-react";
+import { FilterIcon, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 
 type Org = { id: string; name: string };
 
@@ -51,9 +44,11 @@ export default function Page() {
   const [targetOrgId, setTargetOrgId] = useState("");
   const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<
     "all" | "draft" | "pending" | "completed"
   >("all");
+  const [currentPage, setCurrentPage] = useState(1);
   const moveTriggerRef = useRef<HTMLButtonElement | null>(null);
   const [moveTriggerWidth, setMoveTriggerWidth] = useState<number>(0);
 
@@ -70,20 +65,42 @@ export default function Page() {
   const orgs: Org[] = orgData?.orgs ?? [];
   const activeOrg = orgData?.activeOrg ?? null;
 
-  // 2️⃣ FETCH DOCUMENTS FOR ACTIVE ORG WITH SEARCH
-  // Debounce search query to reduce API calls
-  const debouncedSearchQuery = useDeferredValue(searchQuery);
+  // Debounce search query - only update after 500ms of inactivity
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 500);
 
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // 2️⃣ FETCH DOCUMENTS FOR ACTIVE ORG WITH SEARCH
   const { data: documentsResponse, isLoading: docsLoading } = useQuery({
-    queryKey: ["documents", activeOrg, debouncedSearchQuery, statusFilter],
+    queryKey: [
+      "documents",
+      activeOrg,
+      debouncedSearchQuery,
+      statusFilter,
+      currentPage,
+    ],
     queryFn: () =>
-      searchDocuments({ query: debouncedSearchQuery, status: statusFilter }),
+      searchDocuments({
+        query: debouncedSearchQuery,
+        status: statusFilter,
+        page: currentPage,
+      }),
     enabled: !!activeOrg,
     staleTime: 30000, // Cache for 30 seconds
     gcTime: 300000, // Keep in cache for 5 minutes
   });
 
+  // Reset to page 1 when search or filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchQuery, statusFilter]);
+
   const documentsData = documentsResponse?.documents;
+  const pagination = documentsResponse?.pagination;
 
   // Stable documents array to avoid new reference on every render when data is undefined
   // API already includes signers, so map them to recipients format
@@ -245,83 +262,88 @@ export default function Page() {
               </Button>
             )}
 
-            {/* Filter Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2">
-                  <FilterIcon className="h-4 w-4" />
-                  <span className="text-sm font-medium">
-                    {statusFilter === "all"
-                      ? "All"
-                      : statusFilter.charAt(0).toUpperCase() +
-                        statusFilter.slice(1)}
-                  </span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                className="w-48 rounded-2xl shadow-lg border border-gray-200 px-1 py-2"
-              >
-                <DropdownMenuLabel className="text-xs font-semibold text-gray-500 uppercase px-3 py-2">
-                  Filter by Status
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => setStatusFilter("all")}
-                  className="px-3 py-2 cursor-pointer hover:bg-gray-50 rounded-lg mx-1"
-                >
-                  <span className="flex items-center gap-2">
-                    <div
-                      className={`h-2 w-2 rounded-full bg-gray-400 ${statusFilter === "all" ? "ring-2 ring-gray-400 ring-offset-2" : ""}`}
-                    />
-                    <span className="text-sm">All Documents</span>
-                  </span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => setStatusFilter("draft")}
-                  className="px-3 py-2 cursor-pointer hover:bg-gray-50 rounded-lg mx-1"
-                >
-                  <span className="flex items-center gap-2">
-                    <div
-                      className={`h-2 w-2 rounded-full bg-yellow-500 ${statusFilter === "draft" ? "ring-2 ring-yellow-500 ring-offset-2" : ""}`}
-                    />
-                    <span className="text-sm">Draft</span>
-                  </span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => setStatusFilter("pending")}
-                  className="px-3 py-2 cursor-pointer hover:bg-gray-50 rounded-lg mx-1"
-                >
-                  <span className="flex items-center gap-2">
-                    <div
-                      className={`h-2 w-2 rounded-full bg-blue-500 ${statusFilter === "pending" ? "ring-2 ring-blue-500 ring-offset-2" : ""}`}
-                    />
-                    <span className="text-sm">Pending</span>
-                  </span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => setStatusFilter("completed")}
-                  className="px-3 py-2 cursor-pointer hover:bg-gray-50 rounded-lg mx-1"
-                >
-                  <span className="flex items-center gap-2">
-                    <div
-                      className={`h-2 w-2 rounded-full bg-green-500 ${statusFilter === "completed" ? "ring-2 ring-green-500 ring-offset-2" : ""}`}
-                    />
-                    <span className="text-sm">Completed</span>
-                  </span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* Filter and Search - Only show if there are documents */}
+            {documentsData && (
+              <>
+                {/* Filter Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button className="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2">
+                      <FilterIcon className="h-4 w-4" />
+                      <span className="text-sm font-medium">
+                        {statusFilter === "all"
+                          ? "All"
+                          : statusFilter.charAt(0).toUpperCase() +
+                            statusFilter.slice(1)}
+                      </span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-48 rounded-2xl shadow-lg border border-gray-200 px-1 py-2"
+                  >
+                    <DropdownMenuLabel className="text-xs font-semibold text-gray-500 uppercase px-3 py-2">
+                      Filter by Status
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => setStatusFilter("all")}
+                      className="px-3 py-2 cursor-pointer hover:bg-gray-50 rounded-lg mx-1"
+                    >
+                      <span className="flex items-center gap-2">
+                        <div
+                          className={`h-2 w-2 rounded-full bg-gray-400 ${statusFilter === "all" ? "ring-2 ring-gray-400 ring-offset-2" : ""}`}
+                        />
+                        <span className="text-sm">All Documents</span>
+                      </span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setStatusFilter("draft")}
+                      className="px-3 py-2 cursor-pointer hover:bg-gray-50 rounded-lg mx-1"
+                    >
+                      <span className="flex items-center gap-2">
+                        <div
+                          className={`h-2 w-2 rounded-full bg-yellow-500 ${statusFilter === "draft" ? "ring-2 ring-yellow-500 ring-offset-2" : ""}`}
+                        />
+                        <span className="text-sm">Draft</span>
+                      </span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setStatusFilter("pending")}
+                      className="px-3 py-2 cursor-pointer hover:bg-gray-50 rounded-lg mx-1"
+                    >
+                      <span className="flex items-center gap-2">
+                        <div
+                          className={`h-2 w-2 rounded-full bg-blue-500 ${statusFilter === "pending" ? "ring-2 ring-blue-500 ring-offset-2" : ""}`}
+                        />
+                        <span className="text-sm">Pending</span>
+                      </span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setStatusFilter("completed")}
+                      className="px-3 py-2 cursor-pointer hover:bg-gray-50 rounded-lg mx-1"
+                    >
+                      <span className="flex items-center gap-2">
+                        <div
+                          className={`h-2 w-2 rounded-full bg-green-500 ${statusFilter === "completed" ? "ring-2 ring-green-500 ring-offset-2" : ""}`}
+                        />
+                        <span className="text-sm">Completed</span>
+                      </span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
-            <div className="flex items-center border border-gray-300 rounded-xl px-3 py-2 gap-2 max-w-xs bg-white shadow-sm">
-              <input
-                type="text"
-                placeholder="Search your file..."
-                className="flex-1 outline-none text-sm text-gray-700"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
+                <div className="flex items-center border border-gray-300 rounded-xl px-3 py-2 gap-2 max-w-xs bg-white shadow-sm">
+                  <input
+                    type="text"
+                    placeholder="Search your file..."
+                    className="flex-1 outline-none text-sm text-gray-700"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+              </>
+            )}
 
             <Button
               className="px-3 py-2 shadow-sm flex gap-2 rounded-xl bg-[#364152]"
@@ -342,6 +364,55 @@ export default function Page() {
           searchQuery={searchQuery}
           statusFilter={statusFilter}
         />
+
+        {/* Pagination Controls */}
+        {pagination && pagination.totalCount > 12 && (
+          <div className="flex items-center justify-center gap-2 mt-8 mb-8">
+            <button
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={!pagination.hasPreviousPage || docsLoading}
+              className="px-4 py-2 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm flex items-center gap-2 cursor-pointer"
+              aria-label="Previous page"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              <span className="text-sm font-medium">Previous</span>
+            </button>
+
+            <div className="flex items-center gap-2">
+              {Array.from(
+                { length: pagination.totalPages },
+                (_, i) => i + 1
+              ).map((page) => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  disabled={docsLoading}
+                  className={`px-3 py-2 cursor-pointer rounded-lg text-sm font-medium transition-all ${
+                    currentPage === page
+                      ? "bg-[#ff7f4a] text-white shadow-sm"
+                      : "border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  }`}
+                  aria-label={`Go to page ${page}`}
+                  aria-current={currentPage === page ? "page" : undefined}
+                >
+                  {page}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() =>
+                setCurrentPage(Math.min(pagination.totalPages, currentPage + 1))
+              }
+              disabled={!pagination.hasNextPage || docsLoading}
+              className="px-4 py-2 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm flex items-center gap-2"
+              aria-label="Next page"
+            >
+              <span className="text-sm font-medium">Next</span>
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Upload Modal */}

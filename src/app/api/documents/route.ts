@@ -73,12 +73,18 @@ export async function POST(req: NextRequest) {
 
 // Validation schema
 const searchSchema = z.object({
-  query: z.string().optional().default(''),
-  status: z.enum(['draft', 'pending', 'completed', 'all']).optional().default('all'),
+  query: z.string().optional().default(""),
+  status: z
+    .enum(["draft", "pending", "completed", "all"])
+    .optional()
+    .default("all"),
   page: z.coerce.number().int().positive().optional().default(1),
-  limit: z.coerce.number().int().positive().max(100).optional().default(20),
-  sortBy: z.enum(['createdAt', 'updatedAt', 'fileName']).optional().default('createdAt'),
-  sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
+  limit: z.coerce.number().int().positive().max(100).optional().default(12),
+  sortBy: z
+    .enum(["createdAt", "updatedAt", "fileName"])
+    .optional()
+    .default("createdAt"),
+  sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),
 });
 
 export async function GET(request: NextRequest) {
@@ -96,12 +102,12 @@ export async function GET(request: NextRequest) {
     // Parse and validate query parameters
     const searchParams = request.nextUrl.searchParams;
     const rawParams = {
-      query: searchParams.get('query') || undefined,
-      status: searchParams.get('status') || undefined,
-      page: searchParams.get('page') || undefined,
-      limit: searchParams.get('limit') || undefined,
-      sortBy: searchParams.get('sortBy') || undefined,
-      sortOrder: searchParams.get('sortOrder') || undefined,
+      query: searchParams.get("query") || undefined,
+      status: searchParams.get("status") || undefined,
+      page: searchParams.get("page") || undefined,
+      limit: searchParams.get("limit") || undefined,
+      sortBy: searchParams.get("sortBy") || undefined,
+      sortOrder: searchParams.get("sortOrder") || undefined,
     };
 
     const validationResult = searchSchema.safeParse(rawParams);
@@ -109,7 +115,7 @@ export async function GET(request: NextRequest) {
     if (!validationResult.success) {
       return NextResponse.json(
         {
-          error: 'Invalid parameters',
+          error: "Invalid parameters",
           details: validationResult.error.flatten().fieldErrors,
         },
         { status: 400 }
@@ -132,20 +138,20 @@ export async function GET(request: NextRequest) {
     }
 
     // Add search query filter
-    if (params.query && params.query.trim() !== '') {
+    if (params.query && params.query.trim() !== "") {
       whereClause.AND = [
         {
           OR: [
-            { fileName: { contains: params.query, mode: 'insensitive' } },
-            { subject: { contains: params.query, mode: 'insensitive' } },
-            { message: { contains: params.query, mode: 'insensitive' } },
+            { fileName: { contains: params.query, mode: "insensitive" } },
+            { subject: { contains: params.query, mode: "insensitive" } },
+            { message: { contains: params.query, mode: "insensitive" } },
           ],
         },
       ];
     }
 
     // Add status filter
-    if (params.status !== 'all') {
+    if (params.status !== "all") {
       whereClause.status = params.status;
     }
 
@@ -198,7 +204,7 @@ export async function GET(request: NextRequest) {
               order: true,
             },
             orderBy: {
-              order: 'asc',
+              order: "asc",
             },
           },
           _count: {
@@ -237,15 +243,15 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Document fetch error:', error);
+    console.error("Document fetch error:", error);
 
     // Handle specific Prisma errors
     if (error instanceof Error) {
-      if (error.message.includes('Invalid `prisma')) {
+      if (error.message.includes("Invalid `prisma")) {
         return NextResponse.json(
           {
-            error: 'Database query failed',
-            message: 'Unable to fetch documents. Please try again.',
+            error: "Database query failed",
+            message: "Unable to fetch documents. Please try again.",
           },
           { status: 500 }
         );
@@ -254,8 +260,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(
       {
-        error: 'Failed to fetch documents',
-        message: 'An unexpected error occurred.',
+        error: "Failed to fetch documents",
+        message: "An unexpected error occurred.",
       },
       { status: 500 }
     );
