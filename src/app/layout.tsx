@@ -17,6 +17,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "EasySignn",
   description: "Simplify your document signing process with EasySign.",
+  icons: {
+    icon: "/logos/easysign.png",
+    apple: "/logos/easysign.png",
+  },
 };
 
 export default function RootLayout({
