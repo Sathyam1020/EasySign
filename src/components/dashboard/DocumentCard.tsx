@@ -42,7 +42,7 @@ type Props = {
   onSelectToggle?: (id: string, checked: boolean) => void;
 };
 
-const canDelete = true; // TODO: implement actual logic
+const canDelete = true;
 
 export function DocumentCard({
   id,

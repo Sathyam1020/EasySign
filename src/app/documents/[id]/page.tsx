@@ -19,6 +19,7 @@ import {
 } from "@/lib/services/documents/documents";
 import { updateSigner } from "@/lib/services/documents/signers";
 import { useRenameDocument } from "@/hooks/useRenameDocument";
+import { sendDocumentInvites } from "@/lib/services/documents/documents";
 import { useSignerManagement } from "@/hooks/useSignerManagement";
 import { useUser } from "@/hooks/useUser";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -431,6 +432,20 @@ function DocumentViewerInner() {
     }
   };
 
+  const [sending, setSending] = useState(false);
+  const handleSendDocument = async () => {
+    if (!documentId) return;
+    try {
+      setSending(true);
+      const res = await sendDocumentInvites(documentId);
+      toast.success(`Sent to ${res.sent} recipient(s)`);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to send document");
+    } finally {
+      setSending(false);
+    }
+  };
+
   // Loading and error states
   if (loading) {
     return (
@@ -555,6 +570,13 @@ function DocumentViewerInner() {
               fileName={meta?.fileName || "Untitled"}
               onRename={handleOpenRename}
               onPreview={handlePreview}
+              onSend={handleSendDocument}
+              sendDisabled={
+                sending ||
+                (Boolean(syncStatus?.pendingCount) &&
+                  syncStatus!.pendingCount > 0) ||
+                recipients.length === 0
+              }
               syncStatus={syncStatus}
             />
 

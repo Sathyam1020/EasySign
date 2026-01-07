@@ -19,7 +19,9 @@ type DocumentHeaderProps = {
   fileStatus?: string;
   onPreview?: () => void;
   onRename?: () => void;
+  onSend?: () => void;
   renameDisabled?: boolean;
+  sendDisabled?: boolean;
   syncStatus?: {
     syncedCount: number;
     pendingCount: number;
@@ -31,7 +33,9 @@ const DocumentHeader = ({
   fileStatus,
   onPreview,
   onRename,
+  onSend,
   renameDisabled,
+  sendDisabled,
   syncStatus,
 }: DocumentHeaderProps) => {
   const router = useRouter();
@@ -71,8 +75,8 @@ const DocumentHeader = ({
                     fileStatus.toLowerCase() === "pending"
                       ? "bg-yellow-100 text-yellow-800"
                       : fileStatus.toLowerCase() === "completed"
-                      ? "bg-green-100 text-green-800"
-                      : "bg-blue-100 text-blue-800"
+                        ? "bg-green-100 text-green-800"
+                        : "bg-blue-100 text-blue-800"
                   }`}
                 >
                   {fileStatus}
@@ -147,7 +151,8 @@ const DocumentHeader = ({
           </div>
 
           <Button
-            disabled={true}
+            onClick={onSend}
+            disabled={sendDisabled}
             className="rounded-xl bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 font-medium shadow-md hover:shadow-lg transition-all duration-200"
           >
             <Send /> Send Document

@@ -158,25 +158,27 @@ export function OrgSwitcher() {
             </div>
           </DropdownMenuTrigger>
 
-          <DropdownMenuContent className="w-full rounded-xl">
-            {data?.orgs?.map((org: any) => {
-              const letter = org.name?.charAt(0).toUpperCase();
+          <DropdownMenuContent className="w-full rounded-xl p-0 overflow-hidden">
+            <div className="max-h-56 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
+              {data?.orgs?.map((org: any) => {
+                const letter = org.name?.charAt(0).toUpperCase();
 
-              return (
-                <DropdownMenuItem
-                  key={org.id}
-                  onClick={() => switchMutation.mutate(org.id)}
-                  className="p-2.5 cursor-pointer text-sm flex items-center gap-3"
-                >
-                  <div className="h-7 w-7 rounded-full bg-gray-600 text-white flex items-center justify-center font-medium">
-                    {letter}
-                  </div>
+                return (
+                  <DropdownMenuItem
+                    key={org.id}
+                    onClick={() => switchMutation.mutate(org.id)}
+                    className="p-2.5 cursor-pointer text-sm flex items-center gap-3"
+                  >
+                    <div className="h-7 w-7 rounded-full bg-gray-600 text-white flex items-center justify-center font-medium">
+                      {letter}
+                    </div>
 
-                  <span className="text-gray-700">{org.name}</span>
-                </DropdownMenuItem>
-              );
-            })}
-            <DropdownMenuSeparator />
+                    <span className="text-gray-700">{org.name}</span>
+                  </DropdownMenuItem>
+                );
+              })}
+            </div>
+            <DropdownMenuSeparator className="m-0" />
             <DropdownMenuItem
               onClick={() => setOpenCreate(true)}
               className="text-gray-700 p-2.5 cursor-pointer"

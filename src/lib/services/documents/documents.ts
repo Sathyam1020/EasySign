@@ -118,3 +118,19 @@ export async function moveDocuments(
 
   return res.json();
 }
+
+// 4. Send signing invitations for a document
+export async function sendDocumentInvites(documentId: string) {
+  const res = await fetch(`${getApiUrl()}/documents/${documentId}/send`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ mode: "initial" }),
+  });
+
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(body?.error || "Failed to send invitations");
+  }
+  return body;
+}
