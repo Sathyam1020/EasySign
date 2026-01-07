@@ -25,14 +25,17 @@ const Navbar = () => {
   return (
     <div className="max-w-7xl mx-auto ">
       <div className="flex items-center justify-between py-2">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center cursor-pointer " onClick={() => window.location.href = "/dashboard"}>
           <Image src={logo} alt="logo" width={90} height={90} />
-          <div className="px-3 py-2 border border-gray-300 bg-white hover:bg-gray-50 transition-all duration-200  rounded-xl cursor-pointer flex items-center gap-1 shadow-sm">
+          {/* <div className="px-3 py-2 border border-gray-300 bg-white hover:bg-gray-50 transition-all duration-200  rounded-xl cursor-pointer flex items-center gap-1 shadow-sm">
             <BuildingIcon className="text-gray-600 h-4 w-4" />
             <div className="text-sm font-medium text-gray-600">
               Workspace
             </div>
             <ChevronDownIcon className="text-gray-600 h-4 w-4" />
+          </div> */}
+          <div className="text-xl font-bold">
+            <span className="text-gray-600">Easy</span><span className="text-[#ff7f4a]">Signn</span>
           </div>
         </div>
         <div className="flex items-center gap-7">

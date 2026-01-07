@@ -13,6 +13,8 @@ type Props = {
   isLoading: boolean;
   selectedIds: Set<string>;
   onToggleSelect: (id: string, checked: boolean) => void;
+  searchQuery?: string;
+  statusFilter?: "all" | "draft" | "pending" | "completed";
 };
 
 const themes: Theme[] = [
@@ -28,6 +30,8 @@ export default function DocumentsComponent({
   isLoading,
   selectedIds,
   onToggleSelect,
+  searchQuery = "",
+  statusFilter = "all",
 }: Props) {
   const [openUpload, setOpenUpload] = useState(false);
 
@@ -51,24 +55,59 @@ export default function DocumentsComponent({
 
   // empty state
   if (!documents || documents.length === 0) {
+    const hasActiveFilter = statusFilter !== "all" || searchQuery.trim() !== "";
+
     return (
       <div>
         <div className="w-full bg-white rounded-3xl flex flex-col items-center justify-center gap-4 mt-20 px-10 py-16">
           <CircleAlertIcon className="h-9 w-9 text-gray-500" />
 
-          <div className="text-gray-500">
-            No documents are yet added in this workspace yet.
+          <div className="text-gray-700 font-semibold text-lg">
+            {hasActiveFilter
+              ? searchQuery
+                ? "No documents found"
+                : `No ${statusFilter} documents`
+              : "No documents yet"}
           </div>
 
-          <Button
-            onClick={() => setOpenUpload(true)}
-            className="bg-white border border-gray-300 rounded-xl text-gray-600 font-bold 
-                       shadow-sm transition-all duration-200 
-                       hover:scale-105 hover:shadow-md"
-          >
-            <PlusCircleIcon className="text-gray-600 mr-1" />
-            Add document
-          </Button>
+          <div className="text-gray-500 text-sm text-center max-w-md">
+            {hasActiveFilter ? (
+              searchQuery ? (
+                <>
+                  No documents match your search{" "}
+                  <span className="font-semibold text-gray-700">
+                    "{searchQuery}"
+                  </span>
+                  {statusFilter !== "all" && (
+                    <>
+                      {" "}
+                      with status{" "}
+                      <span className="font-semibold text-gray-700">
+                        {statusFilter}
+                      </span>
+                    </>
+                  )}
+                  . Try adjusting your filters or search terms.
+                </>
+              ) : (
+                `You don't have any ${statusFilter} documents yet. Try selecting a different filter.`
+              )
+            ) : (
+              "No documents are added in this workspace yet. Upload your first document to get started."
+            )}
+          </div>
+
+          {!hasActiveFilter && (
+            <Button
+              onClick={() => setOpenUpload(true)}
+              className="bg-white border border-gray-300 rounded-xl text-gray-600 font-bold 
+                         shadow-sm transition-all duration-200 
+                         hover:scale-105 hover:shadow-md mt-2"
+            >
+              <PlusCircleIcon className="text-gray-600 mr-1" />
+              Add document
+            </Button>
+          )}
         </div>
 
         <UploadDocumentModal

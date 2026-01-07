@@ -1,6 +1,13 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef, useLayoutEffect } from "react";
+import {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useLayoutEffect,
+  useDeferredValue,
+} from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import Navbar from "@/components/dashboard/Navbar";
@@ -9,9 +16,8 @@ import { OrgSwitcher } from "@/components/dashboard/OrgSwitcher";
 import { UploadDocumentModal } from "@/components/dashboard/UploadDocument";
 
 import { countOrgs } from "@/lib/services/organisation/count";
-import { getDocumentsOfOrg } from "@/lib/services/documents/count";
+import { searchDocuments } from "@/lib/services/documents/getDocuments";
 import { moveDocuments } from "@/lib/services/documents/documents";
-import { loadSigners } from "@/lib/services/documents/signers";
 
 import {
   Dialog,
@@ -32,7 +38,7 @@ import {
 
 import { toast } from "sonner";
 import { createOrg } from "@/lib/services/organisation/organisation";
-import { Plus } from "lucide-react";
+import { FilterIcon, Plus } from "lucide-react";
 
 type Org = { id: string; name: string };
 
@@ -44,10 +50,10 @@ export default function Page() {
   const [moveModalOpen, setMoveModalOpen] = useState(false);
   const [targetOrgId, setTargetOrgId] = useState("");
   const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>([]);
-  const [documentsWithRecipients, setDocumentsWithRecipients] = useState<any[]>(
-    []
-  );
-  const [isEnrichingDocuments, setIsEnrichingDocuments] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "draft" | "pending" | "completed"
+  >("all");
   const moveTriggerRef = useRef<HTMLButtonElement | null>(null);
   const [moveTriggerWidth, setMoveTriggerWidth] = useState<number>(0);
 
@@ -64,54 +70,39 @@ export default function Page() {
   const orgs: Org[] = orgData?.orgs ?? [];
   const activeOrg = orgData?.activeOrg ?? null;
 
-  // 2️⃣ FETCH DOCUMENTS FOR ACTIVE ORG
-  const { data: documentsData, isLoading: docsLoading } = useQuery({
-    queryKey: ["documents", activeOrg],
-    queryFn: getDocumentsOfOrg,
-    enabled: !!activeOrg, // only fetch when org is ready
+  // 2️⃣ FETCH DOCUMENTS FOR ACTIVE ORG WITH SEARCH
+  // Debounce search query to reduce API calls
+  const debouncedSearchQuery = useDeferredValue(searchQuery);
+
+  const { data: documentsResponse, isLoading: docsLoading } = useQuery({
+    queryKey: ["documents", activeOrg, debouncedSearchQuery, statusFilter],
+    queryFn: () =>
+      searchDocuments({ query: debouncedSearchQuery, status: statusFilter }),
+    enabled: !!activeOrg,
+    staleTime: 30000, // Cache for 30 seconds
+    gcTime: 300000, // Keep in cache for 5 minutes
   });
 
+  const documentsData = documentsResponse?.documents;
+
   // Stable documents array to avoid new reference on every render when data is undefined
-  const documents = useMemo(() => documentsData ?? [], [documentsData]);
+  // API already includes signers, so map them to recipients format
+  const documents = useMemo(() => {
+    const docs = documentsData ?? [];
+    return docs.map((doc: any) => ({
+      ...doc,
+      recipients:
+        doc.signers?.map((s: any) => ({
+          email: s.email,
+          name: s.name,
+        })) ?? [],
+    }));
+  }, [documentsData]);
 
   // Reset selection when workspace changes or data refreshes
   useEffect(() => {
     setSelectedDocumentIds([]);
   }, [activeOrg]);
-
-  // Fetch signers for each document and enrich documents with recipients
-  useEffect(() => {
-    const enrichDocuments = async () => {
-      setIsEnrichingDocuments(true);
-      try {
-        const enriched = await Promise.all(
-          documents.map(async (doc: any) => {
-            try {
-              const signers = await loadSigners(doc.id);
-              return {
-                ...doc,
-                recipients: signers.map((s: any) => ({
-                  email: s.email,
-                  name: s.name,
-                })),
-              };
-            } catch (error) {
-              console.error(`Failed to load signers for ${doc.id}:`, error);
-              return { ...doc, recipients: [] };
-            }
-          })
-        );
-        setDocumentsWithRecipients(enriched);
-      } finally {
-        setIsEnrichingDocuments(false);
-      }
-    };
-    if (documents.length > 0) {
-      enrichDocuments();
-    } else {
-      setDocumentsWithRecipients([]);
-    }
-  }, [documents]);
 
   const moveTargets = useMemo(
     () => orgs.filter((o) => o.id !== activeOrg),
@@ -254,11 +245,81 @@ export default function Page() {
               </Button>
             )}
 
-            <div className="flex items-center border border-gray-300 rounded-xl px-3 py-2 gap-2 max-w-xs bg-white">
+            {/* Filter Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-xl hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2">
+                  <FilterIcon className="h-4 w-4" />
+                  <span className="text-sm font-medium">
+                    {statusFilter === "all"
+                      ? "All"
+                      : statusFilter.charAt(0).toUpperCase() +
+                        statusFilter.slice(1)}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="w-48 rounded-2xl shadow-lg border border-gray-200 px-1 py-2"
+              >
+                <DropdownMenuLabel className="text-xs font-semibold text-gray-500 uppercase px-3 py-2">
+                  Filter by Status
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setStatusFilter("all")}
+                  className="px-3 py-2 cursor-pointer hover:bg-gray-50 rounded-lg mx-1"
+                >
+                  <span className="flex items-center gap-2">
+                    <div
+                      className={`h-2 w-2 rounded-full bg-gray-400 ${statusFilter === "all" ? "ring-2 ring-gray-400 ring-offset-2" : ""}`}
+                    />
+                    <span className="text-sm">All Documents</span>
+                  </span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setStatusFilter("draft")}
+                  className="px-3 py-2 cursor-pointer hover:bg-gray-50 rounded-lg mx-1"
+                >
+                  <span className="flex items-center gap-2">
+                    <div
+                      className={`h-2 w-2 rounded-full bg-yellow-500 ${statusFilter === "draft" ? "ring-2 ring-yellow-500 ring-offset-2" : ""}`}
+                    />
+                    <span className="text-sm">Draft</span>
+                  </span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setStatusFilter("pending")}
+                  className="px-3 py-2 cursor-pointer hover:bg-gray-50 rounded-lg mx-1"
+                >
+                  <span className="flex items-center gap-2">
+                    <div
+                      className={`h-2 w-2 rounded-full bg-blue-500 ${statusFilter === "pending" ? "ring-2 ring-blue-500 ring-offset-2" : ""}`}
+                    />
+                    <span className="text-sm">Pending</span>
+                  </span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setStatusFilter("completed")}
+                  className="px-3 py-2 cursor-pointer hover:bg-gray-50 rounded-lg mx-1"
+                >
+                  <span className="flex items-center gap-2">
+                    <div
+                      className={`h-2 w-2 rounded-full bg-green-500 ${statusFilter === "completed" ? "ring-2 ring-green-500 ring-offset-2" : ""}`}
+                    />
+                    <span className="text-sm">Completed</span>
+                  </span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <div className="flex items-center border border-gray-300 rounded-xl px-3 py-2 gap-2 max-w-xs bg-white shadow-sm">
               <input
                 type="text"
                 placeholder="Search your file..."
                 className="flex-1 outline-none text-sm text-gray-700"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
 
@@ -274,10 +335,12 @@ export default function Page() {
 
       <div className="max-w-7xl mx-auto">
         <DocumentsComponent
-          documents={documentsWithRecipients}
-          isLoading={docsLoading || isEnrichingDocuments}
+          documents={documents}
+          isLoading={docsLoading}
           selectedIds={new Set(selectedDocumentIds)}
           onToggleSelect={toggleSelection}
+          searchQuery={searchQuery}
+          statusFilter={statusFilter}
         />
       </div>
 

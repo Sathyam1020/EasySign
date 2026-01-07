@@ -14,6 +14,8 @@ const Navbar = () => {
         <Image
           src={logo}
           alt="logo"
+          height={90}
+          width={90}
         />
       </div>
       <div className="flex items-center gap-4">
